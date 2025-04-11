@@ -1,0 +1,8 @@
+# Editors
+.idea/
+
+# Build cache
+/target/
+
+# Secrets
+config.toml

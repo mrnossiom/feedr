@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = ["feedr-core", "feedr-dev", "feedr-server"]
+
+[workspace.dependencies]
+feedr-core.path = "feedr-core"
+
+diesel = { version = "2", features = ["sqlite", "r2d2"] }
+
+[workspace.lints]
+[workspace.lints.rust]
+unsafe_code = "forbid"
+[workspace.lints.rustdoc]
+all = "warn"
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+# cargo = { level = "warn", priority = -1 }
+
+# expect_used = "warn"
+# missing_docs_in_private_items = "warn"
+todo = "warn"
+unwrap_used = "warn"

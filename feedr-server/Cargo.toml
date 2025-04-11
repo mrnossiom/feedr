@@ -1,0 +1,21 @@
+lints.workspace = true
+
+[package]
+name = "feedr-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+feedr-core.workspace = true
+
+diesel.workspace = true
+
+axum = { version = "0.8", features = ["multipart"] }
+eyre = "0.6"
+facet = "0.2"
+facet-toml = "0.3"
+serde = "1"
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+uuid = { version = "1", features = ["v4"] }
+parking_lot = "0.12.3"

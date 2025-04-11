@@ -1,0 +1,9 @@
+lints.workspace = true
+
+[package]
+name = "feedr-dev"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+feedr-core.workspace = true
