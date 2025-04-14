@@ -1,14 +1,19 @@
-use crate::config::Config;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use api::api_router;
 use axum::{Router, routing::get};
 use config::Ressources;
 use eyre::WrapErr;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
+
+use crate::config::Config;
 
 mod api;
 mod auth;
 mod config;
+mod import;
+mod models;
+mod scheduler;
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
@@ -19,10 +24,11 @@ async fn main() -> eyre::Result<()> {
 
 	let app = Router::new()
 		.route("/", get(async || "Hello, FeedR!"))
-		// .nest("/web", Router::new())
-		.nest("/api", api_router(&ressources));
+		// .nest("/web", web_router())
+		.nest("/api", api_router(ressources.clone()))
+		.with_state(ressources);
 
-	let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), config.port);
+	let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), config.server.port);
 	let listener = TcpListener::bind(addr)
 		.await
 		.wrap_err_with(|| format!("could not bind to the specified interface: {addr:?}"))?;

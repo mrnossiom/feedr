@@ -1,3 +1,5 @@
+use std::{collections::HashMap, sync::Arc, task::Context};
+
 use axum::{
 	extract::FromRequestParts,
 	http::{Request, StatusCode, header, request::Parts},
@@ -7,11 +9,10 @@ use diesel::{
 	r2d2::{ConnectionManager, Pool},
 };
 use parking_lot::Mutex;
-use std::{collections::HashMap, sync::Arc, task::Context};
 use tower::{Layer, Service};
 
 #[derive(Debug, Clone)]
-pub struct UserId(i32);
+pub struct UserId(pub i32);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SessionSecret(String);
@@ -116,7 +117,7 @@ impl<S> AuthnService<S> {
 		match login_kind {
 			LoginKind::Session(session) => self.session_map.lock().get(&session).cloned(),
 			LoginKind::ApiKey(key) => {
-				use feedr_core::models::schema::*;
+				use crate::models::schema::*;
 				let mut conn = self.db_pool.get().ok()?;
 				let user_id: i32 = api_key::table
 					.select(api_key::user_id)

@@ -1,2 +1,9 @@
+[server]
+port = 3000
+database_url = "file:data.sqlite"
+
+[web]
+base_url = "https://feedr.wiro.world"
+
 [scheduler]
 auto-refresh = false

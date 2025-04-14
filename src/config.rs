@@ -1,18 +1,27 @@
+use std::{env::var, path::Path};
+
 use diesel::{
 	SqliteConnection,
 	r2d2::{ConnectionManager, Pool},
 };
 use eyre::WrapErr;
-use facet::Facet;
-use std::{env::var, path::Path, sync::Arc};
+use serde::Deserialize;
 
-#[derive(Facet)]
+#[derive(Deserialize)]
 pub struct Config {
-	pub base_url: String,
+	pub server: ServerConfig,
+	pub web: WebConfig,
+}
 
+#[derive(Deserialize)]
+pub struct ServerConfig {
 	pub port: u16,
-
 	pub database_url: String,
+}
+
+#[derive(Deserialize)]
+pub struct WebConfig {
+	pub base_url: String,
 }
 
 impl Config {
@@ -25,27 +34,27 @@ impl Config {
 
 		let config_content =
 			std::fs::read_to_string(config_path).wrap_err("could not read the config file")?;
-		let config = facet_toml::from_str::<Self>(&config_content)
+		let config = toml::from_str::<Self>(&config_content)
 			.wrap_err("config file does not match the expect structure")?;
 
 		Ok(config)
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ressources {
 	pub db_pool: Pool<ConnectionManager<SqliteConnection>>,
 }
 
 impl Ressources {
-	pub(crate) fn init(config: &Config) -> eyre::Result<Arc<Self>> {
-		let manager = ConnectionManager::<SqliteConnection>::new(&config.database_url);
+	pub(crate) fn init(config: &Config) -> eyre::Result<Self> {
+		let manager = ConnectionManager::<SqliteConnection>::new(&config.server.database_url);
 		let db_pool = Pool::builder()
 			.build(manager)
 			.wrap_err("could not build database connection pool")?;
 
 		let ressources = Self { db_pool };
 
-		Ok(Arc::new(ressources))
+		Ok(ressources)
 	}
 }

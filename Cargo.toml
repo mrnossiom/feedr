@@ -1,18 +1,26 @@
-[workspace]
-resolver = "2"
-members = ["feedr-core", "feedr-dev", "feedr-server"]
+[package]
+name = "feedr-server"
+version = "0.0.0"
+edition = "2024"
 
-[workspace.dependencies]
-feedr-core.path = "feedr-core"
+[dependencies]
+axum = { version = "0.8", features = ["json", "multipart"] }
+diesel = { version = "2", features = ["r2d2", "sqlite", "uuid"] }
+eyre = "0.6"
+opml = "1"
+parking_lot = "0.12.3"
+serde = "1"
+tokio = { version = "1", features = ["full"] }
+toml = "0.8"
+tower = "0.5"
+url = "2"
+uuid = { version = "1", features = ["v4"] }
 
-diesel = { version = "2", features = ["sqlite", "r2d2"] }
-
-[workspace.lints]
-[workspace.lints.rust]
+[lints.rust]
 unsafe_code = "forbid"
-[workspace.lints.rustdoc]
+[lints.rustdoc]
 all = "warn"
-[workspace.lints.clippy]
+[lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 nursery = { level = "warn", priority = -1 }
 # cargo = { level = "warn", priority = -1 }

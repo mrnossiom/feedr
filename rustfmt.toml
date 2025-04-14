@@ -1,1 +1,4 @@
 hard_tabs = true
+
+# One day... it will land on stable
+# group_imports = "StdExternalCrate"
