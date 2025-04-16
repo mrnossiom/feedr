@@ -1,0 +1,51 @@
+{% extends "_base.html" -%}
+
+{%- block title -%}
+Login to FeedR
+{%- endblock -%}
+
+{%- block extra_head -%}
+{%- endblock -%}
+
+{% block content %}
+<div class="container">
+  <p>
+    Login to FeedR
+  </p>
+
+  <p>
+    {% if let Some(user) = username %}
+      {{ user }}
+    {% else %}
+      No user
+    {% endif %}
+  </p>
+
+  <p>
+    {% if failed %}
+      Login failed
+    {% endif %}
+  </p>
+
+  <form method="post" class="container">
+    <label for="username">Username</label>
+    <input name="username" type="text" placeholder="Enter username" required>
+
+    <label for="password">Password</label>
+    <input name="password" type="password" placeholder="Enter password" required>
+
+    <button type="submit" name="kind" value="basic">Login with password</button>
+  </form>
+
+  <form method="post" class="container">
+    <label for="instance">Login instance</label>
+    <input name="instance" type="text" placeholder="Enter instance URI" required>
+
+    <button type="submit" name="kind" value="dauth">Login with DAuth</button>
+  </form>
+
+  <div>
+    <span>Forgot <a href="#">password?</a></span>
+  </div>
+{% endblock content %}
+

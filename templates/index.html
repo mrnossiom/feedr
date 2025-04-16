@@ -1,0 +1,38 @@
+{% extends "_base.html" -%}
+
+{%- block title -%}
+Welcome to FeedR
+{%- endblock -%}
+
+{%- block extra_head -%}
+{%- endblock -%}
+
+{% block header %}
+<div>
+  <p>User info: {{ username }}</p>
+</div>
+{% endblock header %}
+
+{% block content %}
+<div>
+  <div>
+    <h1>Feeds registered</h1>
+    <ul>
+      {% for feed in user_feeds %}
+      <li>
+      {{ feed.title }} {{ feed.status }}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div>
+    <h1>Last entries</h1>
+    <ul>
+      {% for entry in user_entries %}
+      <li>{{ entry.title }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock content %}

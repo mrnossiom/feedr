@@ -2,15 +2,12 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use axum::{Router, routing::get};
+use axum::Router;
 use eyre::WrapErr;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{EnvFilter, Registry};
+use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::api::api_router;
 use crate::config::{Config, Ressources};
 use crate::scheduler::Fetcher;
 
@@ -20,22 +17,22 @@ mod config;
 mod database;
 mod import;
 mod scheduler;
+mod web;
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
 	let config = Config::load_file_from_env().wrap_err("could not load the config")?;
 	setup_tracing();
 
-	tracing::info!("Starting fetcher");
+	tracing::info!("starting fetcher");
 	let fetcher_handler = Fetcher::setup().wrap_err("could not start fetcher")?;
 
 	let ressources =
 		Ressources::init(&config, fetcher_handler).wrap_err("could not init ressources")?;
 
 	let app = Router::new()
-		.route("/", get(async || "Hello, FeedR!"))
-		// .nest("/web", web_router())
-		.nest("/api", api_router(&ressources))
+		.nest("/api", api::router(&ressources))
+		.merge(web::router(&ressources))
 		.layer(TraceLayer::new_for_http())
 		.with_state(ressources);
 
@@ -44,7 +41,7 @@ async fn main() -> eyre::Result<()> {
 		.await
 		.wrap_err_with(|| format!("could not bind to the specified interface: {addr:?}"))?;
 
-	tracing::info!("Starting app router");
+	tracing::info!("starting app router");
 	axum::serve(listener, app)
 		.await
 		.wrap_err("could not serve app")?;
@@ -58,11 +55,7 @@ fn setup_tracing() {
 
 	Registry::default()
 		.with(env_filter)
-		.with(
-			tracing_subscriber::fmt::layer()
-				.with_file(true)
-				.with_line_number(true),
-		)
+		.with(tracing_subscriber::fmt::layer())
 		// TODO: add otlp layer
 		.init();
 }

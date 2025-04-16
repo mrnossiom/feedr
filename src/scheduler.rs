@@ -1,45 +1,58 @@
 use eyre::WrapErr;
 use reqwest::Client;
-use tokio::{sync::mpsc, task};
+use tokio::{
+	sync::mpsc::{self, Receiver},
+	task,
+};
 use url::Url;
+
+use crate::database::models::FeedId;
 
 #[derive(Debug)]
 pub struct Fetcher {
 	client: Client,
+	rx: Receiver<FetchTask>,
 }
 
 impl Fetcher {
 	pub fn setup() -> eyre::Result<FetcherHandle> {
-		let (tx, mut rx) = mpsc::channel(100);
+		// TODO: see how to handle large traffic
+		let (tx, rx) = mpsc::channel(100);
 
 		let user_agent = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 		let client = Client::builder()
 			.user_agent(user_agent)
 			.build()
 			.wrap_err("could not build client")?;
-		let fetcher = Self { client };
 
-		task::spawn(async move {
-			while let Some(task) = rx.recv().await {
-				let FetchTask { feed_id, url } = task;
-
-				match fetcher.client.get(url.clone()).send().await {
-					Ok(res) => {
-						tracing::info!(
-							"sucessfully fetched url {url} for feed_id {feed_id}: {res:?}",
-						);
-						// todo!();
-					}
-					Err(err) => {
-						tracing::error!(
-							"unsucessfully fetched url {url} for feed_id {feed_id}: {err:?}"
-						);
-					}
-				}
-			}
-		});
+		let fetcher = Self { client, rx };
+		fetcher.spawn();
 
 		Ok(FetcherHandle { queue: tx })
+	}
+
+	fn spawn(self) {
+		task::spawn(self.loop_task());
+	}
+
+	async fn loop_task(mut self) {
+		while let Some(task) = self.rx.recv().await {
+			let FetchTask { feed_id, url } = task;
+
+			match self.client.get(url.clone()).send().await {
+				Ok(res) => {
+					tracing::info!(
+						"sucessfully fetched url {url} for feed_id {feed_id:?}: {res:?}",
+					);
+					// todo!();
+				}
+				Err(err) => {
+					tracing::error!(
+						"unsucessfully fetched url {url} for feed_id {feed_id:?}: {err:?}"
+					);
+				}
+			}
+		}
 	}
 }
 
@@ -49,7 +62,8 @@ pub struct FetcherHandle {
 }
 
 impl FetcherHandle {
-	async fn fetch_feed(&self, task: FetchTask) -> eyre::Result<()> {
+	pub async fn fetch_feed(&self, task: FetchTask) -> eyre::Result<()> {
+		// TODO: this should not be blocking
 		self.queue
 			.send(task)
 			.await
@@ -57,7 +71,7 @@ impl FetcherHandle {
 	}
 }
 
-struct FetchTask {
-	feed_id: i32,
-	url: Url,
+pub struct FetchTask {
+	pub feed_id: FeedId,
+	pub url: Url,
 }

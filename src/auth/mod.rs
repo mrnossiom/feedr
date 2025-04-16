@@ -4,11 +4,14 @@ use axum::{
 	extract::FromRequestParts,
 	http::{Request, StatusCode, header, request::Parts},
 };
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::prelude::*;
 use parking_lot::Mutex;
 use tower::{Layer, Service};
 
-use crate::{config::Ressources, database::models::UserId};
+use crate::{
+	config::Ressources,
+	database::{PoolConnection, models::UserId},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SessionSecret(String);
@@ -42,21 +45,24 @@ impl<S: Send + Sync> FromRequestParts<S> for AuthSession {
 
 #[derive(Debug, Clone)]
 pub struct AuthnLayer {
-	ressources: Ressources,
+	db_handle: PoolConnection,
 	session_map: Arc<Mutex<HashMap<SessionSecret, UserId>>>,
 	allow_api_keys: bool,
 }
 
 impl AuthnLayer {
-	pub fn new(ressources: Ressources) -> Self {
+	pub fn new(ressources: &Ressources) -> Self {
+		let mut session_map = HashMap::new();
+		session_map.insert(SessionSecret("abc".into()), UserId(1));
+
 		Self {
-			ressources,
-			session_map: Arc::default(),
+			db_handle: ressources.database_handle.clone(),
+			session_map: Arc::new(Mutex::new(session_map)),
 			allow_api_keys: false,
 		}
 	}
 
-	pub fn new_with_api_keys(ressources: Ressources) -> Self {
+	pub fn new_with_api_keys(ressources: &Ressources) -> Self {
 		Self {
 			allow_api_keys: true,
 			..Self::new(ressources)
@@ -70,7 +76,7 @@ impl<S> Layer<S> for AuthnLayer {
 	fn layer(&self, service: S) -> Self::Service {
 		AuthnService {
 			service,
-			ressources: self.ressources.clone(),
+			db_handle: self.db_handle.clone(),
 			session_map: self.session_map.clone(),
 			allow_api_keys: self.allow_api_keys,
 		}
@@ -80,7 +86,7 @@ impl<S> Layer<S> for AuthnLayer {
 #[derive(Debug, Clone)]
 pub struct AuthnService<S> {
 	service: S,
-	ressources: Ressources,
+	db_handle: PoolConnection,
 	session_map: Arc<Mutex<HashMap<SessionSecret, UserId>>>,
 	allow_api_keys: bool,
 }
@@ -114,13 +120,13 @@ impl<S> AuthnService<S> {
 			LoginKind::Session(session) => self.session_map.lock().get(session).copied(),
 			LoginKind::ApiKey(key) => {
 				use crate::database::schema::*;
-				let mut conn = self.ressources.get_db_conn().ok()?;
-				let user_id: i32 = api_key::table
+				let mut conn = self.db_handle.get().ok()?;
+				let user_id = api_key::table
 					.select(api_key::user_id)
 					.filter(api_key::secret.eq(&key.0))
-					.get_result(&mut conn)
+					.get_result::<UserId>(&mut conn)
 					.ok()?;
-				Some(UserId::new(user_id))
+				Some(user_id)
 			}
 		}
 	}

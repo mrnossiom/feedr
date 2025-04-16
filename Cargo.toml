@@ -4,8 +4,8 @@ version = "0.0.0"
 edition = "2024"
 
 [dependencies]
-axum = { version = "0.8", features = ["json", "multipart", "tracing"] }
-diesel-derive-newtype = "2.1.2"
+askama = "0.13"
+diesel-derive-newtype = "2"
 eyre = "0.6"
 opml = "1"
 parking_lot = "0.12"
@@ -13,11 +13,15 @@ serde = "1"
 tokio = { version = "1", features = ["full"] }
 toml = "0.8"
 tower = "0.5"
-tower-http = { version = "0.6", features = ["tracing", "trace"] }
+tower-http = { version = "0.6", features = ["fs", "tracing", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 url = "2"
 uuid = { version = "1", features = ["v4"] }
+
+[dependencies.axum]
+version = "0.8"
+features = ["json", "macros", "multipart", "tracing"]
 
 [dependencies.diesel]
 version = "2"
@@ -25,6 +29,7 @@ features = [
   "r2d2",
   "returning_clauses_for_sqlite_3_35",
   "sqlite",
+  "time",
   "uuid",
 ]
 

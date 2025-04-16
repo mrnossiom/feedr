@@ -34,6 +34,8 @@
               rust-toolchain
               act
 
+              watchexec
+
               diesel-cli
               sqlite
             ];

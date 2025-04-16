@@ -5,8 +5,9 @@ create table feed (
     url text not null,
 
     -- replace with an enum when switching database
-    -- 0 is fine, 1 is fetching, 2 is fetch failed
-    status integer not null
+    status text check(status in ('ok', 'fetching', 'failed')) not null
+
+    -- todo: add titles values coming from the feed
 );
 
 -- idx ensures feeds are unique
@@ -17,6 +18,8 @@ on feed (url);
 create table feed_entry (
     id integer not null primary key autoincrement,
     feed_id integer not null,
+
+    date datetime not null,
 
     title text not null,
     -- cache summary? (first 50 chars of content)
@@ -32,6 +35,7 @@ create table user (
 
     username text not null,
 
+    tmp_unencrypted_secret text,
     d_auth_secret text
 );
 
@@ -52,14 +56,14 @@ create table user_feed (
 create unique index user_feed_idx
 on user_feed (user_id, feed_id);
 
--- feed with user information referencing a `feed_entry`
-create table user_feed_entry (
+-- meta information when user has interacted with a `feed_entry`
+create table user_feed_entry_meta (
     id integer not null primary key autoincrement,
     user_id integer not null,
     feed_entry_id integer not null,
 
-    -- this is a boolean
-    is_read integer not null,
+    read integer not null,
+    starred integer not null,
 
     foreign key (user_id) references user(id),
     foreign key (feed_entry_id) references feed_entry(id)
@@ -75,4 +79,4 @@ create table api_key (
     secret text not null,
 
     foreign key (user_id) references user(id)
-)
+);
