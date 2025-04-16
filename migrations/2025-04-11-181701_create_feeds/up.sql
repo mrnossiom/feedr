@@ -26,8 +26,6 @@ create table feed_entry (
     foreign key (feed_id) references feed(id)
 );
 
------
-
 -- users
 create table user (
     id integer not null primary key autoincrement,
@@ -44,7 +42,7 @@ create table user_feed (
     feed_id integer not null,
 
     title text not null,
-    description text not null,
+    description text,
 
     foreign key (user_id) references user(id),
     foreign key (feed_id) references feed(id)

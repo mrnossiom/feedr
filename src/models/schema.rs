@@ -40,7 +40,7 @@ diesel::table! {
         user_id -> Integer,
         feed_id -> Integer,
         title -> Text,
-        description -> Text,
+        description -> Nullable<Text>,
     }
 }
 

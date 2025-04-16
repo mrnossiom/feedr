@@ -7,7 +7,8 @@ use axum::{
 	routing::{get, post},
 };
 use diesel::{
-	Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, insert_into,
+	Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, debug_query,
+	insert_into, sqlite::Sqlite,
 };
 use serde::{Deserialize, Serialize};
 
@@ -37,10 +38,9 @@ pub fn feeds_api_router() -> Router<Ressources> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Feed {
-	entry_id: i32,
-
+	id: i32,
 	title: String,
-	description: String,
+	description: Option<String>,
 	url: String,
 }
 
@@ -60,7 +60,7 @@ async fn feeds_get_handler(
 
 	use crate::models::schema::*;
 	let mut conn = ressources.db_pool.get().unwrap();
-	let user_id = user_feed::table
+	let user_feeds = user_feed::table
 		.inner_join(feed::table)
 		.select((
 			user_feed::id,
@@ -69,10 +69,20 @@ async fn feeds_get_handler(
 			user_feed::description,
 		))
 		.filter(user_feed::user_id.eq(user_id.0))
-		.load_iter::<(i32, String, String, String), _>(&mut conn)
+		.load::<(i32, String, String, Option<String>)>(&mut conn)
 		.unwrap();
 
-	todo!()
+	let feeds = user_feeds
+		.into_iter()
+		.map(|(id, url, title, description)| Feed {
+			id,
+			title,
+			description,
+			url,
+		})
+		.collect::<Vec<_>>();
+
+	Ok(Json(FeedsGetResponse { feeds }))
 }
 
 // Create new feed entries
@@ -126,14 +136,12 @@ async fn import_post_handler(
 				resolved_feeds.push((feed.title, id));
 			} else {
 				let feed_id = insert_into(feed::table)
-					.values(feed::url.eq(feed.url.as_str()))
+					.values((feed::url.eq(feed.url.as_str()), feed::status.eq(1)))
 					.returning(feed::id)
 					.get_result::<i32>(conn)?;
 				resolved_feeds.push((feed.title, feed_id));
 			}
 		}
-
-		println!("{:?}", &resolved_feeds);
 
 		let values = resolved_feeds
 			.into_iter()
@@ -142,7 +150,6 @@ async fn import_post_handler(
 					user_feed::feed_id.eq(id),
 					user_feed::user_id.eq(user_id.0),
 					user_feed::title.eq(title),
-					user_feed::description.eq(""),
 				)
 			})
 			.collect::<Vec<_>>();
