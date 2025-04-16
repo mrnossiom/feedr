@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 axum = { version = "0.8", features = ["json", "multipart"] }
-diesel = { version = "2", features = ["r2d2", "sqlite", "uuid"] }
+diesel = { version = "2", features = ["r2d2", "sqlite", "uuid", "returning_clauses_for_sqlite_3_35"] }
 eyre = "0.6"
 opml = "1"
 parking_lot = "0.12.3"

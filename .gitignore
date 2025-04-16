@@ -1,8 +1,9 @@
 # Editors
 .idea/
 
-# Build cache
+# Local files
 /target/
+data.sqlite
 
 # Secrets
 config.toml

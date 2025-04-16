@@ -7,8 +7,7 @@ use axum::{
 	routing::{get, post},
 };
 use diesel::{
-	Connection, ExpressionMethods, Insertable, OptionalExtension, QueryDsl, RunQueryDsl,
-	insert_into,
+	Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, insert_into,
 };
 use serde::{Deserialize, Serialize};
 
@@ -61,16 +60,16 @@ async fn feeds_get_handler(
 
 	use crate::models::schema::*;
 	let mut conn = ressources.db_pool.get().unwrap();
-	let user_id: Vec<(i32, String, String, String)> = feed_entry::table
+	let user_id = user_feed::table
 		.inner_join(feed::table)
 		.select((
-			feed_entry::id,
+			user_feed::id,
 			feed::url,
-			feed_entry::title,
-			feed_entry::description,
+			user_feed::title,
+			user_feed::description,
 		))
-		.filter(feed_entry::user_id.eq(user_id.0))
-		.get_results(&mut conn)
+		.filter(user_feed::user_id.eq(user_id.0))
+		.load_iter::<(i32, String, String, String), _>(&mut conn)
 		.unwrap();
 
 	todo!()
@@ -107,37 +106,52 @@ async fn import_post_handler(
 		folders.extend(file_folders);
 	}
 
-	let (_folder_name, feeds) = folders[0];
-	dbg!(&feeds);
+	let (_folder_name, feeds) = folders.swap_remove(0);
 
 	// TODO: resolve or insert feeds
 	let mut conn = ressources.db_pool.get().unwrap();
 	conn.transaction::<(), diesel::result::Error, _>(move |conn| {
-		let feed_ids = Vec::new();
+		use crate::models::schema::*;
+
+		let mut resolved_feeds = Vec::new();
 
 		for feed in feeds {
-			use crate::models::schema::*;
-			let id: Option<i32> = feed::table
+			let id = feed::table
 				.select(feed::id)
 				.filter(feed::url.eq(feed.url.as_str()))
-				.get_result(conn)
+				.get_result::<i32>(conn)
 				.optional()?;
 
 			if let Some(id) = id {
-				feed_ids.push(id);
+				resolved_feeds.push((feed.title, id));
 			} else {
-				insert_into(table).values(records)
+				let feed_id = insert_into(feed::table)
+					.values(feed::url.eq(feed.url.as_str()))
+					.returning(feed::id)
+					.get_result::<i32>(conn)?;
+				resolved_feeds.push((feed.title, feed_id));
 			}
 		}
 
-		todo!();
+		println!("{:?}", &resolved_feeds);
+
+		let values = resolved_feeds
+			.into_iter()
+			.map(|(title, id)| {
+				(
+					user_feed::feed_id.eq(id),
+					user_feed::user_id.eq(user_id.0),
+					user_feed::title.eq(title),
+					user_feed::description.eq(""),
+				)
+			})
+			.collect::<Vec<_>>();
+
+		insert_into(user_feed::table).values(values).execute(conn)?;
 
 		Ok(())
 	})
 	.unwrap();
 
-	// TODO: register feeds and add them to user
-	todo!();
-
-	Ok(StatusCode::IM_A_TEAPOT)
+	Ok(StatusCode::OK)
 }
