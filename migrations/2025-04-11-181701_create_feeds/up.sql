@@ -9,7 +9,7 @@ create table feed (
     status integer not null
 );
 
--- idx ensure feeds are unique
+-- idx ensures feeds are unique
 create unique index feed_url_idx
 on feed (url);
 
@@ -47,6 +47,10 @@ create table user_feed (
     foreign key (user_id) references user(id),
     foreign key (feed_id) references feed(id)
 );
+
+-- idx ensures user has no entries that point to the same feed
+create unique index user_feed_idx
+on user_feed (user_id, feed_id);
 
 -- feed with user information referencing a `feed_entry`
 create table user_feed_entry (

@@ -1,65 +1,94 @@
 use std::borrow::Cow;
 
-use diesel::prelude::Insertable;
+use diesel::prelude::*;
+use diesel_derive_newtype::DieselNewType;
 
 use crate::database::schema::*;
 
-#[derive(Insertable)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DieselNewType)]
+pub struct FeedId(i32);
+
+#[derive(Debug, Clone, Queryable, Identifiable, Selectable)]
 #[diesel(table_name = feed)]
-struct Feed<'a> {
-	id: i32,
+pub struct Feed<'a> {
+	pub id: FeedId,
 
-	url: Cow<'a, str>,
+	pub url: Cow<'a, str>,
 }
 
-#[derive(Insertable)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DieselNewType)]
+pub struct FeedEntryId(i32);
+
+#[derive(Debug, Clone, Queryable, Identifiable, Selectable)]
 #[diesel(table_name = feed_entry)]
-struct FeedEntry<'a> {
-	id: i32,
-	feed_id: i32,
+pub struct FeedEntry<'a> {
+	pub id: FeedEntryId,
+	pub feed_id: FeedId,
 
-	title: Cow<'a, str>,
-	content: Cow<'a, str>,
+	pub title: Cow<'a, str>,
+	pub content: Cow<'a, str>,
 }
 
-#[derive(Insertable)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DieselNewType)]
+pub struct UserId(pub(in crate::database) i32);
+
+#[derive(Debug, Clone, Queryable, Identifiable, Selectable)]
 #[diesel(table_name = user)]
-struct User<'a> {
-	id: i32,
+pub struct User<'a> {
+	pub id: UserId,
 
-	username: Cow<'a, str>,
+	pub username: Cow<'a, str>,
 
-	d_auth_secret: Cow<'a, str>,
+	pub d_auth_secret: Cow<'a, str>,
 }
 
-#[derive(Insertable)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DieselNewType)]
+pub struct UserFeedId(i32);
+
+#[derive(Debug, Clone, Queryable, Identifiable, Selectable)]
 #[diesel(table_name = user_feed)]
-struct UserFeed<'a> {
-	id: i32,
-	user_id: i32,
-	feed_id: i32,
+pub struct UserFeed<'a> {
+	pub id: UserFeedId,
+	pub user_id: UserId,
+	pub feed_id: FeedId,
 
-	title: Cow<'a, str>,
-	description: Cow<'a, str>,
+	pub title: Cow<'a, str>,
+	pub description: Option<Cow<'a, str>>,
 }
 
-#[derive(Insertable)]
+#[derive(Debug, Clone, Insertable)]
+#[diesel(table_name = user_feed)]
+pub struct NewUserFeed<'a> {
+	pub user_id: UserId,
+	pub feed_id: FeedId,
+
+	pub title: Cow<'a, str>,
+	pub description: Option<Cow<'a, str>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DieselNewType)]
+pub struct UserFeedEntryId(i32);
+
+#[derive(Debug, Clone, Queryable, Identifiable, Selectable)]
 #[diesel(table_name = user_feed_entry)]
-struct UserFeedEntry {
-	id: i32,
-	user_id: i32,
-	feed_entry_id: i32,
+pub struct UserFeedEntry {
+	pub id: UserFeedEntryId,
+	pub user_id: UserId,
+	pub feed_entry_id: FeedEntryId,
 
-	is_read: i32,
+	pub is_read: i32,
 }
 
-#[derive(Insertable)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DieselNewType)]
+pub struct ApiKeyId(i32);
+
+#[derive(Debug, Clone, Queryable, Identifiable, Selectable)]
 #[diesel(table_name = api_key)]
-struct ApiKey<'a> {
-	id: i32,
-	user_id: i32,
+pub struct ApiKey<'a> {
+	pub id: ApiKeyId,
+	pub user_id: UserId,
 
-	name: Cow<'a, str>,
+	pub name: Cow<'a, str>,
 
-	secret: Cow<'a, str>,
+	pub secret: Cow<'a, str>,
 }

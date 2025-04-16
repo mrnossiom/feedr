@@ -2,10 +2,12 @@ use std::{env::var, path::Path};
 
 use diesel::{
 	SqliteConnection,
-	r2d2::{ConnectionManager, Pool},
+	r2d2::{ConnectionManager, ManageConnection, Pool, PooledConnection},
 };
 use eyre::WrapErr;
 use serde::Deserialize;
+
+use crate::scheduler::FetcherHandle;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -43,18 +45,30 @@ impl Config {
 
 #[derive(Debug, Clone)]
 pub struct Ressources {
-	pub db_pool: Pool<ConnectionManager<SqliteConnection>>,
+	database_handle: Pool<ConnectionManager<SqliteConnection>>,
+	fetcher_handle: FetcherHandle,
 }
 
 impl Ressources {
-	pub(crate) fn init(config: &Config) -> eyre::Result<Self> {
+	pub fn init(config: &Config, fetcher_handle: FetcherHandle) -> eyre::Result<Self> {
 		let manager = ConnectionManager::<SqliteConnection>::new(&config.server.database_url);
 		let db_pool = Pool::builder()
 			.build(manager)
 			.wrap_err("could not build database connection pool")?;
 
-		let ressources = Self { db_pool };
+		let ressources = Self {
+			database_handle: db_pool,
+			fetcher_handle,
+		};
 
 		Ok(ressources)
+	}
+
+	pub fn get_db_conn(
+		&self,
+	) -> eyre::Result<PooledConnection<ConnectionManager<SqliteConnection>>> {
+		self.database_handle
+			.get()
+			.wrap_err("could not obtain a connection handle")
 	}
 }

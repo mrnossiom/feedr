@@ -16,3 +16,5 @@ from user_feed uf
 inner join feed
     on feed.id = uf.feed_id
 where uf.user_id = 1;
+
+-- TODO: Resolve a feed_id (get or create)

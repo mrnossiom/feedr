@@ -5,10 +5,10 @@ edition = "2024"
 
 [dependencies]
 axum = { version = "0.8", features = ["json", "multipart", "tracing"] }
+diesel-derive-newtype = "2.1.2"
 eyre = "0.6"
 opml = "1"
 parking_lot = "0.12"
-rayon = "1"
 serde = "1"
 tokio = { version = "1", features = ["full"] }
 toml = "0.8"
@@ -45,5 +45,4 @@ nursery = { level = "warn", priority = -1 }
 # expect_used = "warn"
 # missing_docs_in_private_items = "warn"
 todo = "warn"
-unnecessary_self_imports = "warn"
 unwrap_used = "warn"

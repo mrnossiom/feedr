@@ -26,15 +26,16 @@ async fn main() -> eyre::Result<()> {
 	let config = Config::load_file_from_env().wrap_err("could not load the config")?;
 	setup_tracing();
 
-	let ressources = Ressources::init(&config).wrap_err("could not init ressources")?;
+	tracing::info!("Starting fetcher");
+	let fetcher_handler = Fetcher::setup().wrap_err("could not start fetcher")?;
 
-	tracing::info!("Starting scheduler");
-	let scheduler = Fetcher::setup();
+	let ressources =
+		Ressources::init(&config, fetcher_handler).wrap_err("could not init ressources")?;
 
 	let app = Router::new()
 		.route("/", get(async || "Hello, FeedR!"))
 		// .nest("/web", web_router())
-		.nest("/api", api_router(ressources.clone()))
+		.nest("/api", api_router(&ressources))
 		.layer(TraceLayer::new_for_http())
 		.with_state(ressources);
 
