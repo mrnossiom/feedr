@@ -117,7 +117,7 @@ impl<S> AuthnService<S> {
 		match login_kind {
 			LoginKind::Session(session) => self.session_map.lock().get(session).cloned(),
 			LoginKind::ApiKey(key) => {
-				use crate::models::schema::*;
+				use crate::database::schema::*;
 				let mut conn = self.db_pool.get().ok()?;
 				let user_id: i32 = api_key::table
 					.select(api_key::user_id)

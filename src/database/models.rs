@@ -2,11 +2,10 @@ use std::borrow::Cow;
 
 use diesel::prelude::Insertable;
 
-#[rustfmt::skip]
-pub mod schema;
+use crate::database::schema::*;
 
 #[derive(Insertable)]
-#[diesel(table_name = schema::feed)]
+#[diesel(table_name = feed)]
 struct Feed<'a> {
 	id: i32,
 
@@ -14,7 +13,7 @@ struct Feed<'a> {
 }
 
 #[derive(Insertable)]
-#[diesel(table_name = schema::feed_entry)]
+#[diesel(table_name = feed_entry)]
 struct FeedEntry<'a> {
 	id: i32,
 	feed_id: i32,
@@ -24,7 +23,7 @@ struct FeedEntry<'a> {
 }
 
 #[derive(Insertable)]
-#[diesel(table_name = schema::user)]
+#[diesel(table_name = user)]
 struct User<'a> {
 	id: i32,
 
@@ -34,7 +33,7 @@ struct User<'a> {
 }
 
 #[derive(Insertable)]
-#[diesel(table_name = schema::user_feed)]
+#[diesel(table_name = user_feed)]
 struct UserFeed<'a> {
 	id: i32,
 	user_id: i32,
@@ -45,7 +44,7 @@ struct UserFeed<'a> {
 }
 
 #[derive(Insertable)]
-#[diesel(table_name = schema::user_feed_entry)]
+#[diesel(table_name = user_feed_entry)]
 struct UserFeedEntry {
 	id: i32,
 	user_id: i32,
@@ -55,7 +54,7 @@ struct UserFeedEntry {
 }
 
 #[derive(Insertable)]
-#[diesel(table_name = schema::api_key)]
+#[diesel(table_name = api_key)]
 struct ApiKey<'a> {
 	id: i32,
 	user_id: i32,

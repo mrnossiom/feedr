@@ -1,14 +1,13 @@
-use std::io;
+use std::{borrow::Cow, io};
 
 use axum::{
 	Json, Router,
-	extract::{Multipart, State},
+	extract::{Multipart, Query, State},
 	http::StatusCode,
 	routing::{get, post},
 };
 use diesel::{
-	Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, debug_query,
-	insert_into, sqlite::Sqlite,
+	Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, insert_into,
 };
 use serde::{Deserialize, Serialize};
 
@@ -58,7 +57,7 @@ async fn feeds_get_handler(
 		return Err((StatusCode::UNAUTHORIZED, "you are not logged in"));
 	};
 
-	use crate::models::schema::*;
+	use crate::database::schema::*;
 	let mut conn = ressources.db_pool.get().unwrap();
 	let user_feeds = user_feed::table
 		.inner_join(feed::table)
@@ -85,8 +84,29 @@ async fn feeds_get_handler(
 	Ok(Json(FeedsGetResponse { feeds }))
 }
 
+#[derive(Debug, Deserialize)]
+struct FeedsPostRequest<'a> {
+	title: Cow<'a, str>,
+	description: Option<Cow<'a, str>>,
+	url: Cow<'a, str>,
+}
+
 // Create new feed entries
-async fn feeds_post_handler(auth: AuthSession) -> Result<StatusCode, (StatusCode, &'static str)> {
+async fn feeds_post_handler(
+	auth: AuthSession,
+	State(ressources): State<Ressources>,
+	Query(query): Query<FeedsPostRequest<'_>>,
+) -> Result<StatusCode, (StatusCode, &'static str)> {
+	let Some(user_id) = auth.user_id else {
+		return Err((StatusCode::UNAUTHORIZED, "you are not logged in"));
+	};
+
+	let FeedsPostRequest {
+		title,
+		description,
+		url,
+	} = query;
+
 	todo!()
 }
 
@@ -121,7 +141,7 @@ async fn import_post_handler(
 	// TODO: resolve or insert feeds
 	let mut conn = ressources.db_pool.get().unwrap();
 	conn.transaction::<(), diesel::result::Error, _>(move |conn| {
-		use crate::models::schema::*;
+		use crate::database::schema::*;
 
 		let mut resolved_feeds = Vec::new();
 

@@ -1,21 +1,24 @@
+//! `FeedR`
+
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use axum::{Router, routing::get};
 use eyre::WrapErr;
 use tokio::net::TcpListener;
+use tower_http::trace::TraceLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
 
 use crate::api::api_router;
 use crate::config::{Config, Ressources};
-use crate::scheduler::Scheduler;
+use crate::scheduler::Fetcher;
 
 mod api;
 mod auth;
 mod config;
+mod database;
 mod import;
-mod models;
 mod scheduler;
 
 #[tokio::main]
@@ -26,12 +29,13 @@ async fn main() -> eyre::Result<()> {
 	let ressources = Ressources::init(&config).wrap_err("could not init ressources")?;
 
 	tracing::info!("Starting scheduler");
-	let scheduler = Scheduler::setup();
+	let scheduler = Fetcher::setup();
 
 	let app = Router::new()
 		.route("/", get(async || "Hello, FeedR!"))
 		// .nest("/web", web_router())
 		.nest("/api", api_router(ressources.clone()))
+		.layer(TraceLayer::new_for_http())
 		.with_state(ressources);
 
 	let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), config.server.port);
@@ -48,11 +52,11 @@ async fn main() -> eyre::Result<()> {
 }
 
 fn setup_tracing() {
+	let env_filter =
+		EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,feedr_server=debug".into());
+
 	Registry::default()
-		.with(
-			EnvFilter::try_from_default_env()
-				.unwrap_or_else(|_| "info,pgpaste_server=debug".into()),
-		)
+		.with(env_filter)
 		.with(
 			tracing_subscriber::fmt::layer()
 				.with_file(true)
