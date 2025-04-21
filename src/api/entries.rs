@@ -1,13 +1,16 @@
-use axum::{Json, Router, http::StatusCode, routing::get};
+use axum::{Json, Router, routing::get};
+use eyre::Context;
 use serde::Serialize;
 
-use crate::{auth::AuthSession, config::RessourcesRef, database::ResolvedUserEntry};
+use crate::{
+	auth::AuthSession, config::RessourcesRef, database::ResolvedUserEntry, error::RouteResult,
+};
 
 pub fn router() -> Router<RessourcesRef> {
 	Router::new().route(
 		"/",
-		get(entries_get_handler), // .post(feeds_post_handler)
-		                          // .delete(feeds_post_handler),
+		get(entries_get_handler), // .post(entries_post_handler)
+		                          // .delete(entries_post_handler),
 	)
 }
 
@@ -20,13 +23,12 @@ struct EntriesGetResponse<'a> {
 async fn entries_get_handler<'a>(
 	auth: AuthSession,
 	ressources: RessourcesRef,
-) -> Result<Json<EntriesGetResponse<'a>>, (StatusCode, &'static str)> {
-	let Some(user_id) = auth.user_id else {
-		return Err((StatusCode::UNAUTHORIZED, "you are not logged in"));
-	};
+) -> RouteResult<Json<EntriesGetResponse<'a>>> {
+	let user_id = auth.user_id()?;
 
-	let mut conn = ressources.get_db_conn().unwrap();
-	let user_feed_entries = ResolvedUserEntry::resolve_all(user_id, &mut conn).unwrap();
+	let mut conn = ressources.database_handle.get()?;
+	let user_feed_entries = ResolvedUserEntry::resolve_all(user_id, &mut conn)
+		.wrap_err("could not retrieve user feed entries")?;
 
 	Ok(Json(EntriesGetResponse { user_feed_entries }))
 }

@@ -1,6 +1,7 @@
 -- Insert dummy user
 insert into user (username) values ('dummy');
 insert into api_key (user_id, name, secret) values (1, 'dev', 'fdr_v0_dev');
+update user set tmp_unencrypted_secret = 'yolo' where id = 1;
 
 -- Insert some feeds
 insert into feed (url, status)

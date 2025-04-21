@@ -39,17 +39,29 @@ create table user (
     d_auth_secret text
 );
 
+create table user_feed_folder (
+    id integer not null primary key autoincrement,
+    user_id integer not null,
+
+    title text not null,
+
+    foreign key (user_id) references user(id)
+);
+
 -- feed with user information referencing a `feed`
 create table user_feed (
     id integer not null primary key autoincrement,
     user_id integer not null,
     feed_id integer not null,
+    -- null is `Default` folder
+    folder_id integer,
 
     title text not null,
     description text,
 
     foreign key (user_id) references user(id),
-    foreign key (feed_id) references feed(id)
+    foreign key (feed_id) references feed(id),
+    foreign key (folder_id) references user_feed_folder(id)
 );
 
 -- idx ensures user has no entries that point to the same feed
@@ -67,6 +79,15 @@ create table user_feed_entry_meta (
 
     foreign key (user_id) references user(id),
     foreign key (feed_entry_id) references feed_entry(id)
+);
+
+-- user sessions
+create table sessions (
+    id text primary key not null,
+    user_id integer not null,
+    expires_at date not null,
+
+    foreign key (user_id) references user(id)
 );
 
 -- user api keys

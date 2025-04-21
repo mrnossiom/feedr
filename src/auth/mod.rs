@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc, task::Context};
 
 use axum::{
 	extract::FromRequestParts,
-	http::{Request, StatusCode, header, request::Parts},
+	http::{Request, header, request::Parts},
 };
 use diesel::prelude::*;
 use parking_lot::Mutex;
@@ -11,10 +11,11 @@ use tower::{Layer, Service};
 use crate::{
 	config::Ressources,
 	database::{PoolConnection, models::UserId},
+	error::{AuthError, RouteError},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SessionSecret(String);
+pub struct SessionSecret(pub String);
 
 #[derive(Debug, Clone)]
 pub struct ApiKey(String);
@@ -28,18 +29,29 @@ pub enum LoginKind {
 #[derive(Debug, Clone)]
 pub struct AuthSession {
 	pub user_id: Option<UserId>,
-	pub login_kind: Option<LoginKind>,
+	pub session_map: Arc<Mutex<HashMap<SessionSecret, UserId>>>,
+}
+
+impl AuthSession {
+	pub fn user_id(&self) -> Result<UserId, AuthError> {
+		self.user_id.ok_or(AuthError::NotAuthenticated)
+	}
+
+	pub fn user_id_or_redirect(&self) -> Result<UserId, AuthError> {
+		self.user_id.ok_or(AuthError::ReturnToLogin)
+	}
 }
 
 impl<S: Send + Sync> FromRequestParts<S> for AuthSession {
-	type Rejection = (StatusCode, &'static str);
+	type Rejection = RouteError;
 
 	async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-		// TODO: ensure msg is backend only
-		parts.extensions.get::<Self>().cloned().ok_or((
-			StatusCode::INTERNAL_SERVER_ERROR,
-			"this is not supposed to show up to the user",
-		))
+		let msg = "logic error: could not access `AuthSession` extension";
+		parts
+			.extensions
+			.get::<Self>()
+			.cloned()
+			.ok_or(RouteError::Static(msg))
 	}
 }
 
@@ -52,8 +64,7 @@ pub struct AuthnLayer {
 
 impl AuthnLayer {
 	pub fn new(ressources: &Ressources) -> Self {
-		let mut session_map = HashMap::new();
-		session_map.insert(SessionSecret("abc".into()), UserId(1));
+		let session_map = HashMap::new();
 
 		Self {
 			db_handle: ressources.database_handle.clone(),
@@ -156,7 +167,7 @@ impl<S: Service<Request<ReqBody>>, ReqBody> Service<Request<ReqBody>> for AuthnS
 
 		let session = AuthSession {
 			user_id,
-			login_kind,
+			session_map: self.session_map.clone(),
 		};
 		req.extensions_mut().insert(session);
 

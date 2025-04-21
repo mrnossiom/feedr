@@ -14,6 +14,12 @@ pub struct IndexTemplate<'a> {
 }
 
 #[derive(Template)]
+#[template(path = "profile.html")]
+pub struct ProfileTemplate<'a> {
+	pub username: Cow<'a, str>,
+}
+
+#[derive(Template)]
 #[template(path = "login.html")]
 pub struct LoginTemplate<'a> {
 	pub username: Option<Cow<'a, str>>,

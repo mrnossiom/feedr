@@ -3,7 +3,7 @@ use std::{env::var, ops, path::Path, sync::Arc};
 use axum::extract::FromRequestParts;
 use diesel::{
 	SqliteConnection,
-	r2d2::{ConnectionManager, Pool, PooledConnection},
+	r2d2::{ConnectionManager, Pool},
 };
 use eyre::WrapErr;
 use serde::Deserialize;
@@ -11,7 +11,7 @@ use url::Url;
 
 use crate::{
 	database::{PoolConnection, models::FeedId},
-	scheduler::{FetchTask, FetcherHandle},
+	fetcher::{FetchTask, Fetcher, FetcherHandle},
 };
 
 #[derive(Deserialize)]
@@ -64,22 +64,25 @@ impl ops::Deref for RessourcesRef {
 	}
 }
 
-impl FromRequestParts<RessourcesRef> for RessourcesRef {
+impl FromRequestParts<Self> for RessourcesRef {
 	type Rejection = ();
 	async fn from_request_parts(
 		_parts: &mut axum::http::request::Parts,
-		state: &RessourcesRef,
+		state: &Self,
 	) -> Result<Self, Self::Rejection> {
 		Ok(state.clone())
 	}
 }
 
 impl Ressources {
-	pub fn init(config: &Config, fetcher_handle: FetcherHandle) -> eyre::Result<RessourcesRef> {
+	pub fn init(config: &Config) -> eyre::Result<RessourcesRef> {
 		let manager = ConnectionManager::<SqliteConnection>::new(&config.server.database_url);
 		let db_pool = Pool::builder()
 			.build(manager)
 			.wrap_err("could not build database connection pool")?;
+
+		tracing::info!("starting fetcher");
+		let fetcher_handle = Fetcher::setup(db_pool.clone()).wrap_err("could not start fetcher")?;
 
 		let ressources = Self {
 			database_handle: db_pool,
@@ -89,15 +92,9 @@ impl Ressources {
 		Ok(RessourcesRef(Arc::new(ressources)))
 	}
 
-	pub fn get_db_conn(
-		&self,
-	) -> eyre::Result<PooledConnection<ConnectionManager<SqliteConnection>>> {
-		self.database_handle
-			.get()
-			.wrap_err("could not obtain a connection handle")
-	}
-
-	pub fn fetch_url(&self, feed_id: FeedId, url: Url) -> impl Future<Output = eyre::Result<()>> {
-		self.fetcher_handle.fetch_feed(FetchTask { feed_id, url })
+	pub async fn fetch_url(&self, feed_id: FeedId, url: Url) -> eyre::Result<()> {
+		self.fetcher_handle
+			.fetch_feed(FetchTask { feed_id, url })
+			.await
 	}
 }

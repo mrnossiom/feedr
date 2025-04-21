@@ -1,8 +1,6 @@
 use std::borrow::Cow;
 
-use diesel::{
-	backend, deserialize, expression::AsExpression, prelude::*, serialize, sql_types::Integer,
-};
+use diesel::prelude::*;
 use diesel_derive_newtype::DieselNewType;
 use serde::{Deserialize, Serialize};
 
@@ -49,6 +47,18 @@ pub struct User<'a> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DieselNewType, Deserialize, Serialize)]
+pub struct UserFeedFolderId(i32);
+
+#[derive(Debug, Clone, Queryable, Identifiable, Selectable)]
+#[diesel(table_name = user_feed_folder)]
+pub struct UserFeedFolder<'a> {
+	pub id: UserFeedFolderId,
+	pub user_id: UserId,
+
+	pub title: Cow<'a, str>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DieselNewType, Deserialize, Serialize)]
 pub struct UserFeedId(i32);
 
 #[derive(Debug, Clone, Queryable, Identifiable, Selectable)]
@@ -57,6 +67,7 @@ pub struct UserFeed<'a> {
 	pub id: UserFeedId,
 	pub user_id: UserId,
 	pub feed_id: FeedId,
+	pub folder_id: Option<UserFeedFolderId>,
 
 	pub title: Cow<'a, str>,
 	pub description: Option<Cow<'a, str>>,

@@ -11,6 +11,7 @@ use diesel::{
 	prelude::*,
 	result::{DatabaseErrorKind, Error},
 };
+use eyre::Context;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -21,6 +22,7 @@ use crate::{
 		ResolvedUserFeed,
 		models::{self, Feed, NewUserFeed, UserFeedId},
 	},
+	error::{RouteError, RouteResult},
 	import::{ImportedFeed, opml_to_feed_folders},
 };
 
@@ -37,22 +39,21 @@ pub fn router() -> Router<RessourcesRef> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct FeedsGetResponse<'a> {
-	feeds: Vec<ResolvedUserFeed<'a>>,
+	user_feeds: Vec<ResolvedUserFeed<'a>>,
 }
 
 // Retrive feed entries
 async fn feeds_get_handler(
 	auth: AuthSession,
 	ressources: RessourcesRef,
-) -> Result<Json<FeedsGetResponse<'static>>, (StatusCode, &'static str)> {
-	let Some(user_id) = auth.user_id else {
-		return Err((StatusCode::UNAUTHORIZED, "you are not logged in"));
-	};
+) -> RouteResult<Json<FeedsGetResponse<'static>>> {
+	let user_id = auth.user_id()?;
 
-	let mut conn = ressources.get_db_conn().unwrap();
-	let user_feeds = ResolvedUserFeed::resolve_all(user_id, &mut conn).unwrap();
+	let mut conn = ressources.database_handle.get()?;
+	let user_feeds = ResolvedUserFeed::resolve_all(user_id, &mut conn)
+		.wrap_err("could not retrieve user feeds")?;
 
-	Ok(Json(FeedsGetResponse { feeds: user_feeds }))
+	Ok(Json(FeedsGetResponse { user_feeds }))
 }
 
 #[derive(Debug, Deserialize)]
@@ -67,10 +68,8 @@ async fn feeds_post_handler(
 	auth: AuthSession,
 	ressources: RessourcesRef,
 	Form(query): Form<FeedsPostRequest<'_>>,
-) -> Result<StatusCode, (StatusCode, &'static str)> {
-	let Some(user_id) = auth.user_id else {
-		return Err((StatusCode::UNAUTHORIZED, "you are not logged in"));
-	};
+) -> RouteResult<StatusCode> {
+	let user_id = auth.user_id()?;
 
 	let FeedsPostRequest {
 		title,
@@ -78,11 +77,11 @@ async fn feeds_post_handler(
 		url,
 	} = query;
 
-	let url = Url::parse(&url).unwrap();
+	let url = Url::parse(&url).map_err(|_| RouteError::User("url is not valid"))?;
 
 	// TODO: assert url scheme is https (allow http?)
 
-	let mut conn = ressources.get_db_conn().unwrap();
+	let mut conn = ressources.database_handle.get()?;
 
 	let transaction = conn.transaction::<_, diesel::result::Error, _>(|conn| {
 		let feed_id = Feed::resolve_or_create(&url, conn)?;
@@ -110,10 +109,7 @@ async fn feeds_post_handler(
 	ressources.fetch_url(feed_id, url).await.unwrap();
 
 	user_feed_id.map_or(
-		Err((
-			StatusCode::BAD_REQUEST,
-			"the current user already has such a feed",
-		)),
+		Err(RouteError::User("the current user already has such a feed")),
 		|_id| {
 			// TODO: return id?
 			Ok(StatusCode::OK)
@@ -121,14 +117,17 @@ async fn feeds_post_handler(
 	)
 }
 
+#[derive(Debug, Deserialize)]
+struct FeedsDeleteRequest {
+	id: UserFeedId,
+}
+
 async fn feeds_delete_handler(
 	auth: AuthSession,
 	ressources: RessourcesRef,
-	Form(query): Form<FeedsPostRequest<'_>>,
-) -> Result<StatusCode, (StatusCode, &'static str)> {
-	let Some(user_id) = auth.user_id else {
-		return Err((StatusCode::UNAUTHORIZED, "you are not logged in"));
-	};
+	Form(query): Form<FeedsDeleteRequest>,
+) -> RouteResult<StatusCode> {
+	let user_id = auth.user_id()?;
 
 	todo!()
 }
@@ -138,51 +137,58 @@ async fn import_post_handler(
 	auth: AuthSession,
 	ressources: RessourcesRef,
 	mut multipart: Multipart,
-) -> Result<StatusCode, (StatusCode, &'static str)> {
-	let Some(user_id) = auth.user_id else {
-		return Err((StatusCode::UNAUTHORIZED, "you are not logged in"));
-	};
+) -> RouteResult<StatusCode> {
+	let user_id = auth.user_id()?;
 
 	let mut folders = Vec::<(String, Vec<ImportedFeed>)>::new();
 	while let Some(file) = multipart
 		.next_field()
 		.await
-		.map_err(|err| (StatusCode::BAD_REQUEST, "could not read multipart field"))?
+		.map_err(|err| RouteError::UserOpaque("could not read multipart field", err.into()))?
 	{
 		let bytes = file
 			.bytes()
 			.await
-			.map_err(|err| (StatusCode::BAD_REQUEST, "could not decode file content"))?;
+			.map_err(|err| RouteError::UserOpaque("could not decode file content", err.into()))?;
 
 		let mut cursor = io::Cursor::new(bytes);
 		let file_folders = opml_to_feed_folders(&mut cursor).unwrap();
 		folders.extend(file_folders);
 	}
 
-	let mut conn = ressources.get_db_conn().unwrap();
-	let transaction = conn.transaction::<(), diesel::result::Error, _>(move |conn| {
+	let mut to_fetch = Vec::new();
+
+	let mut conn = ressources.database_handle.get()?;
+	let transaction = conn.transaction::<(), diesel::result::Error, _>(|conn| {
 		for (folder_name, feeds) in folders {
-			let resolved_values = feeds
-				.into_iter()
-				.map(|feed| {
-					models::Feed::resolve_or_create(&feed.url, conn).map(|feed_id| NewUserFeed {
+			// let folder_id = Folder::resolve_or_create(user_id, folder_name);
+
+			for feed in feeds {
+				let new_feed = models::Feed::resolve_or_create(&feed.url, conn).map(|feed_id| {
+					NewUserFeed {
 						user_id,
 						feed_id,
 						title: feed.title.into(),
 						description: None,
-					})
-				})
-				.collect::<QueryResult<Vec<_>>>()?;
+					}
+				})?;
 
-			// TODO: do not crash on unique violation
-			dsl::insert_into(crate::database::schema::user_feed::table)
-				.values(resolved_values)
-				.execute(conn)?;
+				to_fetch.push((new_feed.feed_id, feed.url));
+
+				// TODO: do not crash on unique violation
+				dsl::insert_into(crate::database::schema::user_feed::table)
+					.values(new_feed)
+					.execute(conn)?;
+			}
 		}
 		Ok(())
 	});
 
 	transaction.unwrap();
+
+	for (feed_id, url) in to_fetch {
+		ressources.fetch_url(feed_id, url).await.unwrap();
+	}
 
 	Ok(StatusCode::OK)
 }

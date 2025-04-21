@@ -37,7 +37,7 @@ impl Feed<'_> {
 	}
 }
 
-/// A mix between user_feed and feed with user_feed(id) resolved
+/// A mix between `user_feed` and feed with `user_feed(id)` resolved
 #[derive(Debug, Clone, Serialize, Deserialize, Queryable)]
 pub struct ResolvedUserFeed<'a> {
 	pub id: UserFeedId,
