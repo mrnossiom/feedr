@@ -16,11 +16,11 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::{
-	auth::AuthSession,
+	auth::ApiSession,
 	config::RessourcesRef,
 	database::{
 		ResolvedUserFeed,
-		models::{self, Feed, NewUserFeed, UserFeedId},
+		models::{self, Feed, NewUserFeed, UserFeedFolder, UserFeedId},
 	},
 	error::{RouteError, RouteResult},
 	import::{ImportedFeed, opml_to_feed_folders},
@@ -44,7 +44,7 @@ struct FeedsGetResponse<'a> {
 
 // Retrive feed entries
 async fn feeds_get_handler(
-	auth: AuthSession,
+	auth: ApiSession,
 	ressources: RessourcesRef,
 ) -> RouteResult<Json<FeedsGetResponse<'static>>> {
 	let user_id = auth.user_id()?;
@@ -65,7 +65,7 @@ struct FeedsPostRequest<'a> {
 
 // Create new feed entries
 async fn feeds_post_handler(
-	auth: AuthSession,
+	auth: ApiSession,
 	ressources: RessourcesRef,
 	Form(query): Form<FeedsPostRequest<'_>>,
 ) -> RouteResult<StatusCode> {
@@ -89,6 +89,7 @@ async fn feeds_post_handler(
 		let stmt = NewUserFeed {
 			user_id,
 			feed_id,
+			folder_id: None,
 			title,
 			description,
 		}
@@ -123,7 +124,7 @@ struct FeedsDeleteRequest {
 }
 
 async fn feeds_delete_handler(
-	auth: AuthSession,
+	auth: ApiSession,
 	ressources: RessourcesRef,
 	Form(query): Form<FeedsDeleteRequest>,
 ) -> RouteResult<StatusCode> {
@@ -134,7 +135,7 @@ async fn feeds_delete_handler(
 
 // Create new feed entries in bulk by using OPML format
 async fn import_post_handler(
-	auth: AuthSession,
+	auth: ApiSession,
 	ressources: RessourcesRef,
 	mut multipart: Multipart,
 ) -> RouteResult<StatusCode> {
@@ -161,13 +162,14 @@ async fn import_post_handler(
 	let mut conn = ressources.database_handle.get()?;
 	let transaction = conn.transaction::<(), diesel::result::Error, _>(|conn| {
 		for (folder_name, feeds) in folders {
-			// let folder_id = Folder::resolve_or_create(user_id, folder_name);
+			let folder_id = UserFeedFolder::resolve_or_create(user_id, &folder_name, conn)?;
 
 			for feed in feeds {
 				let new_feed = models::Feed::resolve_or_create(&feed.url, conn).map(|feed_id| {
 					NewUserFeed {
 						user_id,
 						feed_id,
+						folder_id: Some(folder_id),
 						title: feed.title.into(),
 						description: None,
 					}

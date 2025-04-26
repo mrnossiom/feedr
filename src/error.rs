@@ -1,6 +1,8 @@
-use axum::response::{IntoResponse, Redirect};
+use axum::response::IntoResponse;
 use diesel::r2d2::PoolError;
 use reqwest::StatusCode;
+
+use crate::auth::Backend;
 
 pub type RouteResult<T> = Result<T, RouteError>;
 
@@ -28,6 +30,15 @@ pub enum RouteError {
 	UserOpaque(&'static str, eyre::Report),
 }
 
+impl From<axum_login::Error<Backend>> for RouteError {
+	fn from(value: axum_login::Error<Backend>) -> Self {
+		match value {
+			axum_login::Error::Session(err) => Self::Auth(AuthError::Session(err)),
+			axum_login::Error::Backend(err) => Self::Auth(err),
+		}
+	}
+}
+
 impl IntoResponse for RouteError {
 	fn into_response(self) -> axum::response::Response {
 		match self {
@@ -53,8 +64,11 @@ pub enum AuthError {
 	#[error("user is not authenticated")]
 	NotAuthenticated,
 
-	#[error("user is not authenticated, returning to login")]
-	ReturnToLogin,
+	#[error("session: {0}")]
+	Session(#[from] tower_sessions_core::session::Error),
+
+	#[error("pool: {0}")]
+	DbPool(#[from] PoolError),
 }
 
 impl IntoResponse for AuthError {
@@ -63,7 +77,10 @@ impl IntoResponse for AuthError {
 			err @ Self::NotAuthenticated => {
 				(StatusCode::UNAUTHORIZED, err.to_string()).into_response()
 			}
-			Self::ReturnToLogin => Redirect::to("/login").into_response(),
+			err @ (Self::DbPool(_) | Self::Session(_)) => {
+				tracing::error!(err = %err, "error at auth boundary");
+				StatusCode::INTERNAL_SERVER_ERROR.into_response()
+			}
 		}
 	}
 }

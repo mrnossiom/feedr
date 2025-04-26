@@ -24,6 +24,8 @@ pub struct Config {
 pub struct ServerConfig {
 	pub port: u16,
 	pub database_url: String,
+
+	pub session_secret: String,
 }
 
 #[derive(Deserialize)]

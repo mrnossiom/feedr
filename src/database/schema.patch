@@ -1,0 +1,19 @@
+diff --git a/src/database/schema.rs b/src/database/schema.rs
+index 6d349cc..f78ee24 100644
+--- a/src/database/schema.rs
++++ b/src/database/schema.rs
+@@ -29,13 +29,13 @@ diesel::table! {
+ }
+ 
+ diesel::table! {
+     session (id) {
+         id -> Text,
+         data -> Binary,
+-        expiry_date -> Timestamp,
++        expiry_date -> TimestamptzSqlite,
+     }
+ }
+ 
+ diesel::table! {
+     user (id) {
+         id -> Integer,

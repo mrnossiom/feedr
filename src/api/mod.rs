@@ -1,7 +1,7 @@
 use axum::Router;
 
 use crate::{
-	auth::AuthnLayer,
+	auth::ApiAuthnLayer,
 	config::{Ressources, RessourcesRef},
 };
 
@@ -9,11 +9,11 @@ mod entries;
 mod feeds;
 
 pub fn router(ressources: &Ressources) -> Router<RessourcesRef> {
-	let authn_layer = AuthnLayer::new_with_api_keys(ressources);
+	let api_auth_layer = ApiAuthnLayer::new(ressources);
 
 	Router::new()
 		.nest("/v0", nightly_api_router())
-		.layer(authn_layer)
+		.layer(api_auth_layer)
 }
 
 pub fn nightly_api_router() -> Router<RessourcesRef> {

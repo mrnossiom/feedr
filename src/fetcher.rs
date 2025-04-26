@@ -59,16 +59,13 @@ impl Fetcher {
 
 		// TODO: log errors in the database to notify user
 
-		let response = self
-			.client
-			.get(url.clone())
-			.send()
-			.await
+		// url.set_scheme("https")
+
+		let response = self.client.get(url.clone()).send().await;
+		let body = response
 			.wrap_err("could not reach server")?
 			.error_for_status()
-			.wrap_err("server returned an error")?;
-
-		let body = response
+			.wrap_err("server returned an error")?
 			.bytes()
 			.await
 			.wrap_err("could not access request body")?;
@@ -81,7 +78,9 @@ impl Fetcher {
 
 		tracing::debug!(feed_id = ?feed_id, url = %url, "sucessfully fetched feed");
 
-		// tracing::debug!(entries = ?feed.entries);
+		// let new_entries = feed.entries.iter().take_while(|feed| feed.updated)
+
+		dbg!(feed);
 
 		Ok(())
 	}
@@ -92,7 +91,7 @@ impl Fetcher {
 		&self,
 		feed_id: FeedId,
 		url: &Url,
-		response: Response,
+		response: &Response,
 	) -> Result<(), FetcherError> {
 		use crate::database::schema::*;
 
@@ -117,7 +116,7 @@ impl Fetcher {
 		&self,
 		feed_id: FeedId,
 		url: &Url,
-		err: Result<StatusCode, reqwest::Error>,
+		err: &Result<StatusCode, reqwest::Error>,
 	) -> Result<(), FetcherError> {
 		use crate::database::schema::*;
 

@@ -11,7 +11,7 @@
 
   {#- CSS Style Sheets #}
   <link rel="stylesheet" href="/static/styles/main.css">
-  {# <link rel="stylesheet" href="/static/styles/font-hack-subset.css"> #}
+  {#- <link rel="stylesheet" href="/static/styles/font-hack-subset.css"> #}
 
   <noscript>
       <link rel="stylesheet" href="/static/styles/no-js.css">
@@ -22,24 +22,36 @@
 </head>
 
 <body>
+
 <header>
   {%- block header %}
+  <div class="header__logo">
+    <a href="/" style="text-decoration: none;">
+        <div class="logo">
+          FluxMux
+        </div>
+    </a>
+
+    <a href="/profile/logout" style="text-decoration: none;">
+      Logout
+    </a>
+  </div>
   {% endblock header %}
 </header>
 
 <div id="content">
   {%- block content %}
     {{ u_are_using_the_base_template_without_replacing_the_content }}
-  {% endblock content %}
+  {%- endblock content %}
 </div>
 
 <footer>
 {%- block footer %}
-{% endblock footer %}
+{%- endblock footer %}
 </footer>
 
 {%- block extra_body %}
-{% endblock extra_body %}
+{%- endblock extra_body %}
 </body>
 
 </html>

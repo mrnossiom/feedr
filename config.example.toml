@@ -2,6 +2,9 @@
 port = 3000
 database_url = "file:data.sqlite"
 
+# `openssl rand -base64 64`
+session_secret = ""
+
 [web]
 base_url = "https://feedr.wiro.world"
 

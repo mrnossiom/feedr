@@ -1,29 +1,21 @@
-{% extends "_base.html" -%}
+{% extends "_base.html" %}
 
-{%- block title -%}
-Welcome to FeedR
-{%- endblock -%}
-
-{%- block extra_head -%}
-{%- endblock -%}
-
-{% block header %}
-<div>
-  <p>User info: {{ username }}</p>
-</div>
-{% endblock header %}
+{% block title %}Home - FluxMux{% endblock %}
 
 {% block content %}
 <div>
   <div>
     <h1>Feeds registered</h1>
-    <ul>
-      {% for feed in user_feeds %}
-      <li>
-      {{ feed.title }} ({{ feed.status }})
-      </li>
-      {% endfor %}
-    </ul>
+      {%- for (group, feeds) in user_feeds %}
+        <details>
+        <summary>{{ group }}</summary>
+        <ul>
+        {%- for feed in feeds %}
+          <li>{{ feed.title }} ({{ feed.status }})</li>
+        {%- endfor %}
+        </ul>
+        </details>
+      {%- endfor %}
   </div>
 
   <div>

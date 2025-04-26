@@ -1,27 +1,24 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::HashMap};
 
 use askama::Template;
 
-use crate::database::{ResolvedUserEntry, ResolvedUserFeed};
+use crate::database::{ResolvedUserEntry, ResolvedUserFeed, models::User};
 
 #[derive(Template)]
 #[template(path = "index.html")]
 pub struct IndexTemplate<'a> {
-	pub username: Cow<'a, str>,
+	pub user: &'a User,
 
-	pub user_feeds: Vec<ResolvedUserFeed<'a>>,
+	pub user_feeds: HashMap<Cow<'a, str>, Vec<ResolvedUserFeed<'a>>>,
 	pub user_entries: Vec<ResolvedUserEntry<'a>>,
 }
 
 #[derive(Template)]
 #[template(path = "profile.html")]
 pub struct ProfileTemplate<'a> {
-	pub username: Cow<'a, str>,
+	pub user: &'a User,
 }
 
 #[derive(Template)]
 #[template(path = "login.html")]
-pub struct LoginTemplate<'a> {
-	pub username: Option<Cow<'a, str>>,
-	pub failed: bool,
-}
+pub struct LoginTemplate {}

@@ -1,15 +1,14 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::HashMap};
 
 use diesel::{dsl, prelude::*, r2d2};
-use models::UserId;
+use models::{UserFeedFolder, UserFeedFolderId, UserId};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
 use self::models::{Feed, FeedId, UserFeedEntryMetaId, UserFeedId};
 
-#[rustfmt::skip]
-pub mod schema;
 pub mod models;
+pub mod schema;
 
 pub type PoolConnection = r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>;
 pub type PooledConnection = r2d2::PooledConnection<r2d2::ConnectionManager<SqliteConnection>>;
@@ -49,7 +48,7 @@ pub struct ResolvedUserFeed<'a> {
 	pub description: Option<Cow<'a, str>>,
 }
 
-impl ResolvedUserFeed<'_> {
+impl<'a> ResolvedUserFeed<'a> {
 	pub fn resolve_all(user_id: UserId, conn: &mut PooledConnection) -> QueryResult<Vec<Self>> {
 		use crate::database::schema::*;
 		user_feed::table
@@ -63,6 +62,39 @@ impl ResolvedUserFeed<'_> {
 			))
 			.filter(user_feed::user_id.eq(user_id))
 			.load::<ResolvedUserFeed>(conn)
+	}
+
+	pub fn resolve_all_by_folders<'conn>(
+		user_id: UserId,
+		conn: &'conn mut PooledConnection,
+	) -> QueryResult<HashMap<Cow<'a, str>, Vec<Self>>> {
+		use crate::database::schema::*;
+		let feeds = user_feed::table
+			.inner_join(feed::table)
+			.left_join(user_feed_folder::table)
+			.order_by(user_feed_folder::title)
+			.select((
+				user_feed_folder::title.nullable(),
+				(
+					user_feed::id,
+					feed::url,
+					feed::status,
+					user_feed::title,
+					user_feed::description,
+				),
+			))
+			.filter(user_feed::user_id.eq(user_id))
+			.load_iter::<(Option<Cow<'_, str>>, ResolvedUserFeed), _>(conn)?;
+
+		feeds
+			.into_iter()
+			.try_fold(HashMap::<_, Vec<_>>::new(), move |mut hm, el| {
+				let (folder, feed) = el?;
+				hm.entry(folder.unwrap_or_else(|| "Default".into()))
+					.or_default()
+					.push(feed);
+				Ok(hm)
+			})
 	}
 }
 
@@ -91,5 +123,39 @@ impl ResolvedUserEntry<'_> {
 			))
 			.filter(user_feed_entry_meta::user_id.eq(user_id))
 			.load::<ResolvedUserEntry>(conn)
+	}
+}
+
+impl UserFeedFolder<'_> {
+	pub fn resolve_or_create(
+		user_id: UserId,
+		title: &str,
+		conn: &mut PooledConnection,
+	) -> QueryResult<UserFeedFolderId> {
+		conn.transaction(|conn| {
+			use crate::database::schema::*;
+			let id = user_feed_folder::table
+				.filter(
+					user_feed_folder::title
+						.eq(title)
+						.and(user_feed_folder::user_id.eq(user_id)),
+				)
+				.select(user_feed_folder::id)
+				.get_result::<UserFeedFolderId>(conn)
+				.optional()?;
+
+			id.map_or_else(
+				|| {
+					dsl::insert_into(user_feed_folder::table)
+						.values((
+							user_feed_folder::title.eq(title),
+							user_feed_folder::user_id.eq(user_id),
+						))
+						.returning(user_feed_folder::id)
+						.get_result(conn)
+				},
+				Ok,
+			)
+		})
 	}
 }

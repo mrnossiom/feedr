@@ -27,6 +27,7 @@ create table feed_entry (
     content text,
 
     foreign key (feed_id) references feed(id)
+        on delete cascade
 );
 
 -- users
@@ -35,8 +36,8 @@ create table user (
 
     username text not null,
 
-    tmp_unencrypted_secret text,
-    d_auth_secret text
+    basic_secret text,
+    dauth_secret text
 );
 
 create table user_feed_folder (
@@ -46,6 +47,7 @@ create table user_feed_folder (
     title text not null,
 
     foreign key (user_id) references user(id)
+        on delete cascade
 );
 
 -- feed with user information referencing a `feed`
@@ -59,9 +61,12 @@ create table user_feed (
     title text not null,
     description text,
 
-    foreign key (user_id) references user(id),
-    foreign key (feed_id) references feed(id),
+    foreign key (user_id) references user(id)
+        on delete cascade,
+    foreign key (feed_id) references feed(id)
+        on delete restrict,
     foreign key (folder_id) references user_feed_folder(id)
+        on delete set null
 );
 
 -- idx ensures user has no entries that point to the same feed
@@ -77,17 +82,17 @@ create table user_feed_entry_meta (
     read integer not null,
     starred integer not null,
 
-    foreign key (user_id) references user(id),
+    foreign key (user_id) references user(id)
+        on delete cascade,
     foreign key (feed_entry_id) references feed_entry(id)
+        on delete restrict
 );
 
 -- user sessions
-create table sessions (
+create table session (
     id text primary key not null,
-    user_id integer not null,
-    expires_at date not null,
-
-    foreign key (user_id) references user(id)
+    data blob not null,
+    expiry_date timestamp not null
 );
 
 -- user api keys
@@ -96,8 +101,9 @@ create table api_key (
     user_id integer not null,
 
     name text not null,
-
     secret text not null,
+    expires_at date,
 
     foreign key (user_id) references user(id)
+        on delete cascade
 );

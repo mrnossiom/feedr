@@ -3,23 +3,37 @@ name = "feedr-server"
 version = "0.0.0"
 edition = "2024"
 
+description = ""
+authors = ["Milo Moisson <milo@wiro.world>"]
+homepage = "https://github.com/mrnossiom/feedr"
+repository = "https://github.com/mrnossiom/feedr"
+license = "CECILL-2.1"
+
 [dependencies]
-askama = "0.13"
+askama = "0.14"
+async-trait = "0.1"
+axum-login = "0.17"
+base64 = "0.22.1"
 bytes = "1"
 diesel-derive-newtype = "2"
 eyre = "0.6"
-feed-rs = "2.3.1"
+feed-rs = "2"
 opml = "1"
 parking_lot = "0.12"
+password-auth = "1"
+rmp-serde = "1"
 serde = "1"
 thiserror = "2"
+time = "0.3"
 tokio = { version = "1", features = ["full"] }
 toml = "0.8"
 tower = "0.5"
+tower-sessions = { version = "0.14", features = ["signed"] }
+tower-sessions-core = { version = "0.14", features = ["deletion-task"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 url = "2"
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["serde", "v4"] }
 
 [dependencies.axum]
 version = "0.8"

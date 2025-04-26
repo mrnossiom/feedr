@@ -9,23 +9,10 @@ Login to FeedR
 
 {% block content %}
 <div class="container">
-  <p>
-    Login to FeedR
-  </p>
+  <p>Login to FeedR</p>
 
-  <p>
-    {% if let Some(user) = username %}
-      {{ user }}
-    {% else %}
-      No user
-    {% endif %}
-  </p>
-
-  <p>
-    {% if failed %}
-      Login failed
-    {% endif %}
-  </p>
+  <div id="errors" style="color: red;">
+  </div>
 
   <form method="post" class="container">
     <label for="username">Username</label>
@@ -47,5 +34,6 @@ Login to FeedR
   <div>
     <span>Forgot <a href="#">password?</a></span>
   </div>
+</div>
 {% endblock content %}
 

@@ -1,8 +1,9 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt};
 
 use diesel::prelude::*;
 use diesel_derive_newtype::DieselNewType;
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 
 use crate::database::schema::*;
 
@@ -33,17 +34,23 @@ pub struct FeedEntry<'a> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DieselNewType, Deserialize, Serialize)]
-// pub struct UserId(pub(in crate::database) i32);
-pub struct UserId(pub i32);
+pub struct UserId(pub(in crate::database) i32);
+
+impl fmt::Display for UserId {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.0)
+	}
+}
 
 #[derive(Debug, Clone, Queryable, Identifiable, Selectable)]
 #[diesel(table_name = user)]
-pub struct User<'a> {
+pub struct User {
 	pub id: UserId,
 
-	pub username: Cow<'a, str>,
+	pub username: String,
 
-	pub d_auth_secret: Cow<'a, str>,
+	pub basic_secret: Option<String>,
+	pub dauth_secret: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DieselNewType, Deserialize, Serialize)]
@@ -78,6 +85,7 @@ pub struct UserFeed<'a> {
 pub struct NewUserFeed<'a> {
 	pub user_id: UserId,
 	pub feed_id: FeedId,
+	pub folder_id: Option<UserFeedFolderId>,
 
 	pub title: Cow<'a, str>,
 	pub description: Option<Cow<'a, str>>,
@@ -97,6 +105,17 @@ pub struct UserFeedEntryMeta {
 	pub starred: i32,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, DieselNewType, Deserialize, Serialize)]
+pub struct SessionSecret(pub(crate) String);
+
+#[derive(Debug, Clone, Queryable, Identifiable, Selectable, Insertable)]
+#[diesel(table_name = session)]
+pub struct Session<'a> {
+	pub id: SessionSecret,
+	pub data: &'a [u8],
+	pub expiry_date: OffsetDateTime,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DieselNewType, Deserialize, Serialize)]
 pub struct ApiKeyId(i32);
 
@@ -107,6 +126,5 @@ pub struct ApiKey<'a> {
 	pub user_id: UserId,
 
 	pub name: Cow<'a, str>,
-
 	pub secret: Cow<'a, str>,
 }

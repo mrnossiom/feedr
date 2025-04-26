@@ -3,7 +3,7 @@ use eyre::Context;
 use serde::Serialize;
 
 use crate::{
-	auth::AuthSession, config::RessourcesRef, database::ResolvedUserEntry, error::RouteResult,
+	auth::ApiSession, config::RessourcesRef, database::ResolvedUserEntry, error::RouteResult,
 };
 
 pub fn router() -> Router<RessourcesRef> {
@@ -21,7 +21,7 @@ struct EntriesGetResponse<'a> {
 
 // Retrive feed entries
 async fn entries_get_handler<'a>(
-	auth: AuthSession,
+	auth: ApiSession,
 	ressources: RessourcesRef,
 ) -> RouteResult<Json<EntriesGetResponse<'a>>> {
 	let user_id = auth.user_id()?;

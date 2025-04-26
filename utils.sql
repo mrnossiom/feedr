@@ -1,7 +1,7 @@
 -- Insert dummy user
 insert into user (username) values ('dummy');
+update user set basic_secret = '$argon2i$v=19$m=16,t=2,p=1$cjFoSUV2d21rZmhuY3U5Ng$ADBN0AAOoNCuqf/snBIH1g' where id = 1;
 insert into api_key (user_id, name, secret) values (1, 'dev', 'fdr_v0_dev');
-update user set tmp_unencrypted_secret = 'yolo' where id = 1;
 
 -- Insert some feeds
 insert into feed (url, status)
@@ -13,6 +13,14 @@ insert into user_feed (feed_id, user_id, title, description)
 values (2, 1, 'Matklad', 'Masterclass!');
 
 -- Select all feeds that a user subscribed to
+select uf.id, feed.url, uf.title, uf.description
+from user_feed uf
+inner join feed
+    on feed.id = uf.feed_id
+where uf.user_id = 1;
+
+
+-- Select all feeds that a user subscribed to and group by folder name
 select uf.id, feed.url, uf.title, uf.description
 from user_feed uf
 inner join feed
