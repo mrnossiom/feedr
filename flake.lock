@@ -1,23 +1,57 @@
 {
   "nodes": {
+    "gitignore": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1709087332,
+        "narHash": "sha256-HG2cCnktfHsKV0s4XW83gU3F57gaTljL9KNSuG6bnQs=",
+        "owner": "hercules-ci",
+        "repo": "gitignore.nix",
+        "rev": "637db329424fd7e46cf4185293b9cc8c88c95394",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "gitignore.nix",
+        "type": "github"
+      }
+    },
+    "htmx-src": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-nm6avZuEBg67SSyyZUhjpXVNstHHgUxrtBHqJgowU08=",
+        "type": "file",
+        "url": "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+      }
+    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1744168086,
-        "narHash": "sha256-S9M4HddBCxbbX1CKSyDYgZ8NCVyHcbKnBfoUXeRu2jQ=",
+        "lastModified": 1745526057,
+        "narHash": "sha256-ITSpPDwvLBZBnPRS2bUcHY3gZSwis/uTe255QgMtTLA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "60e405b241edb6f0573f3d9f944617fe33ac4a73",
+        "rev": "f771eb401a46846c1aebd20552521b233dd7e18b",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixos-24.11",
+        "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"
       }
     },
     "root": {
       "inputs": {
+        "gitignore": "gitignore",
+        "htmx-src": "htmx-src",
         "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay"
       }
