@@ -3,7 +3,8 @@
 
 # Local files
 /target/
-data.sqlite
+/data.sqlite
+/static/js/htmx.min.js
 
 # Secrets
 config.toml

@@ -1,11 +1,12 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::borrow::Cow;
 
 use diesel::{dsl, prelude::*, r2d2};
-use models::{UserFeedFolder, UserFeedFolderId, UserId};
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
 use self::models::{Feed, FeedId, UserFeedEntryMetaId, UserFeedId};
+use self::models::{UserFeedFolder, UserFeedFolderId, UserId};
 
 pub mod models;
 pub mod schema;
@@ -48,7 +49,7 @@ pub struct ResolvedUserFeed<'a> {
 	pub description: Option<Cow<'a, str>>,
 }
 
-impl<'a> ResolvedUserFeed<'a> {
+impl ResolvedUserFeed<'_> {
 	pub fn resolve_all(user_id: UserId, conn: &mut PooledConnection) -> QueryResult<Vec<Self>> {
 		use crate::database::schema::*;
 		user_feed::table
@@ -64,15 +65,15 @@ impl<'a> ResolvedUserFeed<'a> {
 			.load::<ResolvedUserFeed>(conn)
 	}
 
-	pub fn resolve_all_by_folders<'conn>(
+	pub fn resolve_all_by_folders(
 		user_id: UserId,
-		conn: &'conn mut PooledConnection,
-	) -> QueryResult<HashMap<Cow<'a, str>, Vec<Self>>> {
+		conn: &mut PooledConnection,
+	) -> QueryResult<Vec<(String, Vec<Self>)>> {
 		use crate::database::schema::*;
 		let feeds = user_feed::table
 			.inner_join(feed::table)
 			.left_join(user_feed_folder::table)
-			.order_by(user_feed_folder::title)
+			.order_by((user_feed_folder::title, user_feed::title))
 			.select((
 				user_feed_folder::title.nullable(),
 				(
@@ -84,17 +85,24 @@ impl<'a> ResolvedUserFeed<'a> {
 				),
 			))
 			.filter(user_feed::user_id.eq(user_id))
-			.load_iter::<(Option<Cow<'_, str>>, ResolvedUserFeed), _>(conn)?;
+			.load::<(Option<Cow<'_, str>>, ResolvedUserFeed)>(conn)?;
 
-		feeds
+		let feed_folders = feeds
 			.into_iter()
-			.try_fold(HashMap::<_, Vec<_>>::new(), move |mut hm, el| {
-				let (folder, feed) = el?;
-				hm.entry(folder.unwrap_or_else(|| "Default".into()))
-					.or_default()
-					.push(feed);
-				Ok(hm)
+			.chunk_by(|(folder, _)| folder.as_deref().unwrap_or("Default").to_string())
+			.into_iter()
+			.map(|(folder, feeds)| {
+				(
+					folder,
+					feeds
+						.into_iter()
+						.map(|(_, feeds)| feeds)
+						.collect::<Vec<_>>(),
+				)
 			})
+			.collect::<Vec<_>>();
+
+		Ok(feed_folders)
 	}
 }
 

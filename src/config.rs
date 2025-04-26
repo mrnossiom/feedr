@@ -5,7 +5,9 @@ use diesel::{
 	SqliteConnection,
 	r2d2::{ConnectionManager, Pool},
 };
+use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use eyre::WrapErr;
+use eyre::eyre;
 use serde::Deserialize;
 use url::Url;
 
@@ -91,7 +93,22 @@ impl Ressources {
 			fetcher_handle,
 		};
 
+		ressources
+			.run_migrations()
+			.wrap_err("could not run migrations")?;
+
 		Ok(RessourcesRef(Arc::new(ressources)))
+	}
+
+	fn run_migrations(&self) -> eyre::Result<()> {
+		const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
+
+		let mut conn = self.database_handle.get()?;
+
+		conn.run_pending_migrations(MIGRATIONS)
+			.map_err(|err| eyre!("{}", err))?;
+
+		Ok(())
 	}
 
 	pub async fn fetch_url(&self, feed_id: FeedId, url: Url) -> eyre::Result<()> {

@@ -1,11 +1,11 @@
-use std::task::Context;
-
 use axum::{
 	extract::FromRequestParts,
 	http::{Request, header, request::Parts},
+	response::{IntoResponse, Response},
 };
 use axum_login::AuthUser;
 use diesel::{dsl, prelude::*, r2d2::PoolError, result::DatabaseErrorKind};
+use eyre::{Context, eyre};
 use password_auth::verify_password;
 use serde::Deserialize;
 use tokio::task;
@@ -24,8 +24,6 @@ use crate::{
 	},
 	error::{AuthError, RouteError},
 };
-
-pub const SESSION_COOKIE_NAME: &str = "fdr-session";
 
 #[derive(Debug, Clone)]
 pub struct ApiKey(String);
@@ -123,7 +121,10 @@ impl<S: Service<Request<ReqBody>>, ReqBody> Service<Request<ReqBody>> for AuthnS
 	type Error = S::Error;
 	type Future = S::Future;
 
-	fn poll_ready(&mut self, cx: &mut Context<'_>) -> std::task::Poll<Result<(), Self::Error>> {
+	fn poll_ready(
+		&mut self,
+		cx: &mut std::task::Context<'_>,
+	) -> std::task::Poll<Result<(), Self::Error>> {
 		self.service.poll_ready(cx)
 	}
 
@@ -317,6 +318,7 @@ pub type AuthSession = axum_login::AuthSession<Backend>;
 
 impl AuthUser for User {
 	type Id = UserId;
+
 	fn id(&self) -> Self::Id {
 		self.id
 	}
@@ -347,7 +349,7 @@ impl axum_login::AuthnBackend for Backend {
 					.filter(user::username.eq(username))
 					.get_result::<User>(&mut conn)
 					.optional()
-					.unwrap();
+					.wrap_err("could not retrieve user based on credentials")?;
 
 				let Some(user) = user else {
 					return Ok(None);
@@ -362,7 +364,7 @@ impl axum_login::AuthnBackend for Backend {
 					if pass_ok { Ok(Some(user)) } else { Ok(None) }
 				})
 				.await
-				.unwrap()
+				.wrap_err("could not check password")?
 			}
 			LoginCredentials::DAuth { .. } => todo!(),
 		}
@@ -379,8 +381,35 @@ impl axum_login::AuthnBackend for Backend {
 			.filter(user::id.eq(user_id))
 			.get_result::<User>(&mut conn)
 			.optional()
-			.unwrap();
+			.wrap_err("could not retrieve user")?;
 
 		Ok(user)
 	}
+}
+
+pub struct UserSession(pub User);
+
+impl<S> FromRequestParts<S> for UserSession
+where
+	S: Send + Sync,
+{
+	type Rejection = Response;
+	async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+		let user = AuthSession::from_request_parts(parts, state)
+			.await
+			.map(|user| user.user.map(Self))
+			.map_err(IntoResponse::into_response)?;
+
+		user.ok_or_else(|| {
+			RouteError::Other(eyre!("current route is not protected")).into_response()
+		})
+	}
+}
+
+pub fn is_safe_relative_path(path: &str) -> bool {
+	path.starts_with('/')
+        && !path.starts_with("//")
+        && !path.contains("://")
+        && !path.contains("..") // avoid directory traversal
+        && !path.contains('\0') // avoid null bytes
 }

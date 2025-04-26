@@ -11,10 +11,10 @@ Login to FeedR
 <div class="container">
   <p>Login to FeedR</p>
 
-  <div id="errors" style="color: red;">
+  <div id="login-error" style="color: red;">
   </div>
 
-  <form method="post" class="container">
+  <form hx-post="/login" hx-swap="none" class="container">
     <label for="username">Username</label>
     <input name="username" type="text" placeholder="Enter username" required>
 
@@ -24,7 +24,7 @@ Login to FeedR
     <button type="submit" name="kind" value="basic">Login with password</button>
   </form>
 
-  <form method="post" class="container">
+  <form hx-post="/login" class="container">
     <label for="instance">Login instance</label>
     <input name="instance" type="text" placeholder="Enter instance URI" required>
 

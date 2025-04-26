@@ -13,6 +13,8 @@
   <link rel="stylesheet" href="/static/styles/main.css">
   {#- <link rel="stylesheet" href="/static/styles/font-hack-subset.css"> #}
 
+  <script src="/static/js/htmx.min.js"></script>
+
   <noscript>
       <link rel="stylesheet" href="/static/styles/no-js.css">
   </noscript>
@@ -25,17 +27,27 @@
 
 <header>
   {%- block header %}
-  <div class="header__logo">
+  <nav class="header__logo">
     <a href="/" style="text-decoration: none;">
         <div class="logo">
           FluxMux
         </div>
     </a>
 
-    <a href="/profile/logout" style="text-decoration: none;">
-      Logout
-    </a>
-  </div>
+    {% if let Some(user) = user %}
+      <a href="/logout" style="text-decoration: none;">
+        Logout
+      </a>
+
+      <span>
+        {{ user.username }}
+      </span>
+    {% else %}
+      <a href="/login" style="text-decoration: none;">
+        Login
+      </a>
+    {% endif %}
+  </nav>
   {% endblock header %}
 </header>
 

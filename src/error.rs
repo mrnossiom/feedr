@@ -69,6 +69,9 @@ pub enum AuthError {
 
 	#[error("pool: {0}")]
 	DbPool(#[from] PoolError),
+
+	#[error("other: {0}")]
+	Other(#[from] eyre::Report),
 }
 
 impl IntoResponse for AuthError {
@@ -77,7 +80,7 @@ impl IntoResponse for AuthError {
 			err @ Self::NotAuthenticated => {
 				(StatusCode::UNAUTHORIZED, err.to_string()).into_response()
 			}
-			err @ (Self::DbPool(_) | Self::Session(_)) => {
+			err @ (Self::DbPool(_) | Self::Session(_) | Self::Other(_)) => {
 				tracing::error!(err = %err, "error at auth boundary");
 				StatusCode::INTERNAL_SERVER_ERROR.into_response()
 			}

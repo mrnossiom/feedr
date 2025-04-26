@@ -1,11 +1,15 @@
 {% extends "_base.html" -%}
 
 {%- block title -%}
-Welcome to FeedR
+Page not found
+{%- endblock -%}
+
+{%- block extra_head -%}
 {%- endblock -%}
 
 {% block content %}
-<div>
-  <p>User info: {{ user.unwrap().username }}</p>
+<div class="container">
+  <p>Not found</p>
 </div>
 {% endblock content %}
+
