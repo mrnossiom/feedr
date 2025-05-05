@@ -1,8 +1,8 @@
 use axum::Router;
 
 use crate::{
-	auth::ApiAuthnLayer,
 	config::{Ressources, RessourcesRef},
+	front::auth::ApiAuthnLayer,
 };
 
 mod entries;

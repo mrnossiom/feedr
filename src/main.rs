@@ -1,20 +1,16 @@
 //! `FeedR`
 
-use app::App;
 use eyre::Context;
 use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::config::{Config, Ressources};
+use crate::front::App;
 
-mod api;
-mod app;
-mod auth;
 mod config;
 mod database;
-mod error;
 mod fetcher;
-mod import;
-mod web;
+mod front;
+mod utils;
 
 fn setup_tracing() {
 	let env_filter =

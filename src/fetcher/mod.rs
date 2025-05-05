@@ -9,10 +9,11 @@ use tokio::{
 };
 use url::Url;
 
-use crate::{
-	database::{PoolConnection, models::FeedId},
-	error::FetcherError,
-};
+use crate::database::{PoolConnection, models::FeedId};
+
+mod error;
+
+pub use self::error::{Error, Result};
 
 #[derive(Debug)]
 pub struct Fetcher {
@@ -54,7 +55,7 @@ impl Fetcher {
 		}
 	}
 
-	async fn task(&self, task: FetchTask) -> Result<(), FetcherError> {
+	async fn task(&self, task: FetchTask) -> Result<()> {
 		let FetchTask { feed_id, url } = task;
 
 		// TODO: log errors in the database to notify user
@@ -87,12 +88,7 @@ impl Fetcher {
 
 	// async fn process(&self, task: FetchTask, mut conn: &mut PoolConnection) -> Result<(), FetchError> {}
 
-	fn on_fetched(
-		&self,
-		feed_id: FeedId,
-		url: &Url,
-		response: &Response,
-	) -> Result<(), FetcherError> {
+	fn on_fetched(&self, feed_id: FeedId, url: &Url, response: &Response) -> Result<()> {
 		use crate::database::schema::*;
 
 		tracing::info!("sucessfully fetched url {url} for feed_id {feed_id:?}: {response:?}",);
@@ -116,8 +112,8 @@ impl Fetcher {
 		&self,
 		feed_id: FeedId,
 		url: &Url,
-		err: &Result<StatusCode, reqwest::Error>,
-	) -> Result<(), FetcherError> {
+		err: &std::result::Result<StatusCode, reqwest::Error>,
+	) -> Result<()> {
 		use crate::database::schema::*;
 
 		tracing::error!("unsucessfully fetched url {url} for feed_id {feed_id:?}: {err:?}");

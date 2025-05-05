@@ -3,7 +3,9 @@ use eyre::Context;
 use serde::Serialize;
 
 use crate::{
-	auth::ApiSession, config::RessourcesRef, database::ResolvedUserEntry, error::RouteResult,
+	config::RessourcesRef,
+	database::ResolvedUserEntry,
+	front::{auth::ApiSession, error::RouteResult},
 };
 
 pub fn router() -> Router<RessourcesRef> {

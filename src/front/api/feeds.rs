@@ -16,14 +16,16 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::{
-	auth::ApiSession,
 	config::RessourcesRef,
 	database::{
 		ResolvedUserFeed,
 		models::{self, Feed, NewUserFeed, UserFeedFolder, UserFeedId},
 	},
-	error::{RouteError, RouteResult},
-	import::{ImportedFeed, opml_to_feed_folders},
+	front::{
+		auth::ApiSession,
+		error::{RouteError, RouteResult},
+	},
+	utils::{ImportedFeed, opml_to_feed_folders},
 };
 
 pub fn router() -> Router<RessourcesRef> {
@@ -153,14 +155,15 @@ async fn import_post_handler(
 			.map_err(|err| RouteError::UserOpaque("could not decode file content", err.into()))?;
 
 		let mut cursor = io::Cursor::new(bytes);
-		let file_folders = opml_to_feed_folders(&mut cursor).unwrap();
+		let file_folders = opml_to_feed_folders(&mut cursor)
+			.wrap_err("could not transform opml file in list of folders")?;
 		folders.extend(file_folders);
 	}
 
 	let mut to_fetch = Vec::new();
 
 	let mut conn = ressources.database_handle.get()?;
-	let transaction = conn.transaction::<(), diesel::result::Error, _>(|conn| {
+	conn.transaction::<(), diesel::result::Error, _>(|conn| {
 		for (folder_name, feeds) in folders {
 			let folder_id = UserFeedFolder::resolve_or_create(user_id, &folder_name, conn)?;
 
@@ -184,12 +187,14 @@ async fn import_post_handler(
 			}
 		}
 		Ok(())
-	});
-
-	transaction.unwrap();
+	})
+	.wrap_err("failed to register bulk feeds from opml file")?;
 
 	for (feed_id, url) in to_fetch {
-		ressources.fetch_url(feed_id, url).await.unwrap();
+		ressources
+			.fetch_url(feed_id, url)
+			.await
+			.wrap_err("failed to put feed in fetcher queue")?;
 	}
 
 	Ok(StatusCode::OK)

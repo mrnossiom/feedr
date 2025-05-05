@@ -18,12 +18,13 @@ use tower_http::{
 };
 use tower_sessions::{ExpiredDeletion, Expiry, SessionManagerLayer, cookie::Key};
 
-use crate::{
-	api,
-	auth::{Backend, SqliteStore},
-	config::{Config, RessourcesRef},
-	web,
-};
+use crate::config::{Config, RessourcesRef};
+use crate::front::auth::{Backend, SqliteStore};
+
+mod api;
+mod auth;
+mod error;
+mod web;
 
 pub struct App {
 	config: Config,

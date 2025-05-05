@@ -1,5 +1,6 @@
 use std::io::Read;
 
+use eyre::Context;
 use opml::OPML;
 use url::Url;
 
@@ -11,8 +12,8 @@ pub struct ImportedFeed {
 
 pub fn opml_to_feed_folders<R: Read>(
 	mut reader: &mut R,
-) -> Result<impl Iterator<Item = (String, Vec<ImportedFeed>)>, ()> {
-	let opml = OPML::from_reader(&mut reader).unwrap();
+) -> eyre::Result<impl Iterator<Item = (String, Vec<ImportedFeed>)>> {
+	let opml = OPML::from_reader(&mut reader).wrap_err("could not fit feed into model")?;
 
 	let iter = opml.body.outlines.into_iter().map(|folder| {
 		let feeds = folder

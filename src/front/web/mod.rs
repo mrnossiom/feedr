@@ -10,19 +10,24 @@ use axum_login::login_required;
 use eyre::Context;
 use reqwest::StatusCode;
 use serde::Deserialize;
-use templates::{HxNotices, HxResponse};
 use time::Duration;
 use tower_cookies::{Cookie, Cookies};
 use tower_http::services::{ServeDir, ServeFile};
 
 use crate::{
-	auth::{AuthSession, Backend, LoginCredentials, UserSession, is_safe_relative_path},
 	config::RessourcesRef,
 	database::{ResolvedUserEntry, ResolvedUserFeed},
-	error::RouteResult,
-	web::templates::{HxRedirect, IntoHxResponse, Template},
+	front::{
+		auth::{AuthSession, Backend, LoginCredentials, UserSession, is_safe_relative_path},
+		error::RouteResult,
+		web::{
+			htmx::{HxNotices, HxRedirect, HxResponse, IntoHxResponse},
+			templates::Template,
+		},
+	},
 };
 
+mod htmx;
 mod templates;
 
 pub const LOGIN_NEXT_COOKIE_NAME: &str = "login-next";

@@ -2,7 +2,7 @@ use axum::response::IntoResponse;
 use diesel::r2d2::PoolError;
 use reqwest::StatusCode;
 
-use crate::auth::Backend;
+use crate::front::auth::Backend;
 
 pub type RouteResult<T> = Result<T, RouteError>;
 
@@ -86,13 +86,4 @@ impl IntoResponse for AuthError {
 			}
 		}
 	}
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum FetcherError {
-	#[error("pool: {0}")]
-	DbPool(#[from] PoolError),
-
-	#[error("other: {0}")]
-	Other(#[from] eyre::Report),
 }
