@@ -43,7 +43,7 @@ impl fmt::Display for UserId {
 }
 
 #[derive(Debug, Clone, Queryable, Identifiable, Selectable)]
-#[diesel(table_name = user)]
+#[diesel(table_name = user_)]
 pub struct User {
 	pub id: UserId,
 

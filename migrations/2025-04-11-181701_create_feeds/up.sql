@@ -1,6 +1,6 @@
 -- feeds source of truth to share entries
 create table feed (
-    id integer not null primary key autoincrement,
+    id integer not null primary key generated always as identity,
 
     url text not null,
 
@@ -16,23 +16,21 @@ on feed (url);
 
 -- a single feed entry fetched
 create table feed_entry (
-    id integer not null primary key autoincrement,
-    feed_id integer not null,
+    id integer not null primary key generated always as identity,
+    feed_id serial references feed(id)
+        on delete cascade,
 
-    date datetime not null,
+    date timestamptz not null,
 
     title text not null,
     -- cache summary? (first 50 chars of content)
     -- summary text,
-    content text,
-
-    foreign key (feed_id) references feed(id)
-        on delete cascade
+    content text
 );
 
 -- users
-create table user (
-    id integer not null primary key autoincrement,
+create table user_ (
+    id integer not null primary key generated always as identity,
 
     username text not null,
 
@@ -41,18 +39,18 @@ create table user (
 );
 
 create table user_feed_folder (
-    id integer not null primary key autoincrement,
-    user_id integer not null,
+    id integer not null primary key generated always as identity,
+    user_id serial,
 
     title text not null,
 
-    foreign key (user_id) references user(id)
+    foreign key (user_id) references user_(id)
         on delete cascade
 );
 
 -- feed with user information referencing a `feed`
 create table user_feed (
-    id integer not null primary key autoincrement,
+    id integer not null primary key generated always as identity,
     user_id integer not null,
     feed_id integer not null,
     -- null is `Default` folder
@@ -61,7 +59,7 @@ create table user_feed (
     title text not null,
     description text,
 
-    foreign key (user_id) references user(id)
+    foreign key (user_id) references user_(id)
         on delete cascade,
     foreign key (feed_id) references feed(id)
         on delete restrict,
@@ -75,14 +73,14 @@ on user_feed (user_id, feed_id);
 
 -- meta information when user has interacted with a `feed_entry`
 create table user_feed_entry_meta (
-    id integer not null primary key autoincrement,
+    id integer not null primary key generated always as identity,
     user_id integer not null,
     feed_entry_id integer not null,
 
     read integer not null,
     starred integer not null,
 
-    foreign key (user_id) references user(id)
+    foreign key (user_id) references user_(id)
         on delete cascade,
     foreign key (feed_entry_id) references feed_entry(id)
         on delete restrict
@@ -91,19 +89,19 @@ create table user_feed_entry_meta (
 -- user sessions
 create table session (
     id text primary key not null,
-    data blob not null,
-    expiry_date timestamp not null
+    data bytea not null,
+    expiry_date timestamptz not null
 );
 
 -- user api keys
 create table api_key (
-    id integer not null primary key autoincrement,
+    id integer not null primary key generated always as identity,
     user_id integer not null,
 
     name text not null,
     secret text not null,
-    expires_at date,
+    expires_at timestamptz,
 
-    foreign key (user_id) references user(id)
+    foreign key (user_id) references user_(id)
         on delete cascade
 );

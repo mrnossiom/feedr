@@ -1,10 +1,8 @@
 use std::{env::var, ops, path::Path, sync::Arc};
 
 use axum::extract::FromRequestParts;
-use diesel::{
-	SqliteConnection,
-	r2d2::{ConnectionManager, Pool},
-};
+use diesel::PgConnection;
+use diesel::r2d2::{ConnectionManager, Pool};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use eyre::WrapErr;
 use eyre::eyre;
@@ -80,7 +78,7 @@ impl FromRequestParts<Self> for RessourcesRef {
 
 impl Ressources {
 	pub fn init(config: &Config) -> eyre::Result<RessourcesRef> {
-		let manager = ConnectionManager::<SqliteConnection>::new(&config.server.database_url);
+		let manager = ConnectionManager::<PgConnection>::new(&config.server.database_url);
 		let db_pool = Pool::builder()
 			.build(manager)
 			.wrap_err("could not build database connection pool")?;

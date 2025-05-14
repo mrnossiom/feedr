@@ -1,6 +1,6 @@
 -- Insert dummy user
-insert into user (username) values ('dummy');
-update user set basic_secret = '$argon2i$v=19$m=16,t=2,p=1$cjFoSUV2d21rZmhuY3U5Ng$ADBN0AAOoNCuqf/snBIH1g' where id = 1;
+insert into user_ (username) values ('dummy');
+update user_ set basic_secret = '$argon2i$v=19$m=16,t=2,p=1$cjFoSUV2d21rZmhuY3U5Ng$ADBN0AAOoNCuqf/snBIH1g' where id = 1;
 insert into api_key (user_id, name, secret) values (1, 'dev', 'fdr_v0_dev');
 
 -- Insert some feeds
@@ -19,7 +19,6 @@ inner join feed
     on feed.id = uf.feed_id
 where uf.user_id = 1;
 
-
 -- Select all feeds that a user subscribed to and group by folder name
 select uf.id, feed.url, uf.title, uf.description
 from user_feed uf
@@ -31,8 +30,8 @@ where uf.user_id = 1;
 
 -- Insert two feed entries a feed
 insert into feed_entry (feed_id, date, title, content)
-values (2, datetime('now'), 'First look at Tangled', 'some content'),
-       (2, datetime('now'), 'Second look at Tangled', 'some content but 2');
+values (2, now(), 'First look at Tangled', 'some content'),
+       (2, now(), 'Second look at Tangled', 'some content but 2');
 
 -- Select all feed entries of a specific feed for a user with optional meta
 select feed_entry.title, meta.read, meta.starred
@@ -40,7 +39,7 @@ from feed_entry
 left join user_feed_entry_meta meta
     on feed_entry.id = meta.feed_entry_id
 where feed_entry.feed_id = 2
-  and feed_entry.date > datetime('now', '-1 month');
+  and feed_entry.date > (now() - '-1 month'::interval);
 
 -- Select all feed entries of a user with optional meta
 select feed_entry.title, meta.read, meta.starred
@@ -50,4 +49,4 @@ inner join feed_entry
 left join user_feed_entry_meta meta
     on feed_entry.id = meta.feed_entry_id
 where uf.user_id = 1
-  and feed_entry.date > datetime('now', '-1 month');
+  and feed_entry.date > (now() - '-1 month'::interval);

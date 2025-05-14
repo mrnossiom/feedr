@@ -49,15 +49,13 @@ impl axum_login::AuthnBackend for Backend {
 		&self,
 		creds: Self::Credentials,
 	) -> Result<Option<Self::User>, Self::Error> {
-		use crate::database::schema::user;
-
+		use crate::database::schema::user_;
 		let mut conn = self.db_pool.get()?;
-
 		match creds {
 			LoginCredentials::Basic { username, password } => {
-				let user = user::table
-					.select(user::all_columns)
-					.filter(user::username.eq(username))
+				let user = user_::table
+					.select(user_::all_columns)
+					.filter(user_::username.eq(username))
 					.get_result::<User>(&mut conn)
 					.optional()
 					.wrap_err("could not retrieve user based on credentials")?;
@@ -85,11 +83,11 @@ impl axum_login::AuthnBackend for Backend {
 		&self,
 		user_id: &axum_login::UserId<Self>,
 	) -> Result<Option<Self::User>, Self::Error> {
-		use crate::database::schema::user;
+		use crate::database::schema::user_;
 		let mut conn = self.db_pool.get()?;
-		let user = user::table
-			.select(user::all_columns)
-			.filter(user::id.eq(user_id))
+		let user = user_::table
+			.select(user_::all_columns)
+			.filter(user_::id.eq(user_id))
 			.get_result::<User>(&mut conn)
 			.optional()
 			.wrap_err("could not retrieve user")?;

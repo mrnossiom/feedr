@@ -11,8 +11,8 @@ use self::models::{UserFeedFolder, UserFeedFolderId, UserId};
 pub mod models;
 pub mod schema;
 
-pub type PoolConnection = r2d2::Pool<r2d2::ConnectionManager<SqliteConnection>>;
-pub type PooledConnection = r2d2::PooledConnection<r2d2::ConnectionManager<SqliteConnection>>;
+pub type PoolConnection = r2d2::Pool<r2d2::ConnectionManager<PgConnection>>;
+pub type PooledConnection = r2d2::PooledConnection<r2d2::ConnectionManager<PgConnection>>;
 
 impl Feed<'_> {
 	pub fn resolve_or_create(url: &Url, conn: &mut PooledConnection) -> QueryResult<FeedId> {

@@ -15,5 +15,8 @@ watch:
 		--restart \
 		'sh -c "cargo rustc -- -Awarnings && target/debug/feedr-server"'
 
+services:
+	nix run .#dev-services
+
 fmt:
 	cargo fmt -- --config "group_imports=StdExternalCrate"
